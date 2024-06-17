@@ -1,4 +1,3 @@
-// src/routes/auth/google/callback.ts
 import { redirect, type RequestHandler } from "@sveltejs/kit";
 import {
   GOOGLE_CLIENT_ID,
@@ -6,16 +5,16 @@ import {
   GOOGLE_REDIRECT_UI,
 } from "$env/static/private";
 import axios from "axios";
+import { createUserSession } from "$lib/repository/userSessions";
+import type { GoogleUser } from "../../types";
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get("code");
-
   if (!code) {
     return new Response("Code not found", { status: 400 });
   }
 
   const state = url.searchParams.get("state");
-
   if (state !== cookies.get("csrf_state")) {
     return new Response("Invalid CSRF token", { status: 400 });
   }
@@ -33,7 +32,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
         grant_type: "authorization_code",
       },
     );
-
     const accessToken = tokenResponse.data.access_token;
 
     const userInfoResponse = await axios.get(
@@ -44,13 +42,20 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
         },
       },
     );
+    const googleUser = userInfoResponse.data as GoogleUser;
 
-    const user = userInfoResponse.data;
-
-    console.log(user);
-
-    // TODO: Handle user data (e.g., save to database, create session, etc.)
+    const userSession = await createUserSession({
+      id: googleUser.id,
+      authProvider: "google",
+      email: googleUser.email,
+      firstName: googleUser.given_name,
+      lastName: googleUser.family_name,
+      profilePicUrl: googleUser.picture,
+    });
+    cookies.set("sessionId", userSession.id, { httpOnly: true, path: "/" });
   } catch (error) {
+    console.error(error);
+
     return new Response("Authentication failed", { status: 500 });
   }
 
