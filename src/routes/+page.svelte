@@ -1,2 +1,6 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+<script lang="ts">
+    const {data} = $props()
+</script>
+
+<h1>Welcome {data.user.firstName}!</h1>
+<a href="/auth/logout">Logout</a>
