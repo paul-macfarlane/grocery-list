@@ -1,9 +1,6 @@
 import { redirect } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import {
-  deleteUserSession,
-  getUserSession,
-} from "$lib/repository/userSessions";
+import { deleteUserSession, getUserSession } from "$lib/services/userSessions";
 
 export const GET: RequestHandler = async ({ cookies }) => {
   const userSession = await getUserSession(cookies);

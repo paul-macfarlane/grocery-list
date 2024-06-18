@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { getUserForSession } from "$lib/repository/userSessions";
+import { getUserForSession } from "$lib/services/userSessions";
 import { redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ cookies }) => {
