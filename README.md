@@ -4,31 +4,34 @@
 
 The purpose of this app is to make shopping for me and my girlfriend easier. The list of expected features are
 
-- [X] authentication
-    - [X] users can log in with social accounts
-        - [X] add protected routes, add sign out, get session info in request
-        - [X] add cleaner styling for login and root page
+- [x] authentication
+  - [x] users can log in with social accounts
+    - [x] add protected routes, add sign out, get session info in request
+    - [x] add cleaner styling for login and root page
 - [ ] creating/editing a shopping list
-    - [ ] items include name, quantity description, image, and link. Only name and quantity are required
-    - [ ] lists can be tied to a specific grocery store
-    - [ ] items can have substitutes when the item is not available
-    - [ ] users can send lists to other users
-    - [ ] lists can be collaborative
-    - [ ] items can be grouped
-    - [ ] users can add "shopping buddies" to send/share shopping lists
+  - [ ] items include name, quantity description, image, and link. Only name and quantity are required
+  - [ ] lists can be tied to a specific grocery store
+  - [ ] items can have substitutes when the item is not available
+  - [ ] users can send lists to other users
+  - [ ] lists can be collaborative
+  - [ ] items can be grouped
+  - [ ] users can add "shopping buddies" to send/share shopping lists
 - [ ] executing a shopping list
-    - [ ] a user can enter an interactive ui execute the list
-    - [ ] mark items as complete
-    - [ ] skip items
-    - [ ] replace items
-    - [ ] user can still edit/add to the list during execution
+  - [ ] a user can enter an interactive ui execute the list
+  - [ ] mark items as complete
+  - [ ] skip items
+  - [ ] replace items
+  - [ ] user can still edit/add to the list during execution
+- [ ] non-feature related work
+  - [x] migrate from PostgreSQL to Turso for cheaper db hosting in the future
+  - [ ] host the application on the web
 
 ## Local Setup
 
-This app is built using Node.js, SvelteKit, Drizzle ORM, and PostgreSQL.
+This app is built using [Node.js](https://nodejs.org/en), [SvelteKit](https://kit.svelte.dev/) (with release candidate for [Svelte 5](https://svelte.dev/blog/svelte-5-release-candidate)), [Drizzle ORM](https://orm.drizzle.team/), and [Turso](https://turso.tech/).
 
-1. [Install Docker Desktop](https://docs.docker.com/get-docker/) and run Docker Desktop (needed for local db).
-2. Spin up Docker DB in background using Docker Compose `docker compose up -d`
+1. [Install Turso CLI](https://docs.turso.tech/cli/introduction)
+2. Create a local db file using `turso dev --db-file local.db` (keep the process running)
 3. Copy `env.example` to `.env` - `cp .env.example .env` and fill in values as needed
 4. Install LTS version of [Node.js](https://nodejs.org/en).
 5. Install node dependencies `npm i`

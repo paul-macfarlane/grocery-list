@@ -1,24 +1,29 @@
-import { pgTable, varchar, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
-export const userSessions = pgTable("user_sessions", {
-  id: varchar("id", { length: 256 }).primaryKey().notNull(),
-  userId: varchar("user_id", { length: 256 }).notNull(),
-  csrfToken: varchar("csrf_token", { length: 256 }).notNull(),
-  authProvider: varchar("auth_provider", { length: 64 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+export const userSessions = sqliteTable("user_sessions", {
+  id: text("id", { length: 256 }).primaryKey().notNull(),
+  userId: text("user_id", { length: 256 }).notNull(),
+  csrfToken: text("csrf_token", { length: 256 }).notNull(),
+  authProvider: text("auth_provider", { length: 64 }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
 });
 
-export const users = pgTable("users", {
-  id: varchar("id", { length: 256 }).primaryKey().notNull(),
-  authProvider: varchar("auth_provider", { length: 64 }).notNull(),
-  email: varchar("email", { length: 256 }).notNull(),
-  firstName: varchar("first_name", { length: 256 }).notNull(),
-  lastName: varchar("last_name", { length: 256 }).notNull(),
-  profilePicUrl: varchar("profile_pic_url", { length: 256 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
+export const users = sqliteTable("users", {
+  id: text("id", { length: 256 }).primaryKey().notNull(),
+  authProvider: text("auth_provider", { length: 64 }).notNull(),
+  email: text("email", { length: 256 }).notNull(),
+  firstName: text("first_name", { length: 256 }).notNull(),
+  lastName: text("last_name", { length: 256 }).notNull(),
+  profilePicUrl: text("profile_pic_url", { length: 256 }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch())`)
+    .$onUpdate(() => new Date()),
 });
