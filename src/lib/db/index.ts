@@ -1,19 +1,10 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import {
-  PG_HOST,
-  PG_PORT,
-  PG_USER,
-  PG_PASSWORD,
-  PG_DATABASE,
-} from "$env/static/private";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client";
+import { TURSO_CONNECTION_URL, TURSO_AUTH_TOKEN } from "$env/static/private";
 
-const pool = new pg.Pool({
-  host: PG_HOST,
-  port: +PG_PORT,
-  user: PG_USER,
-  password: PG_PASSWORD,
-  database: PG_DATABASE,
+const client = createClient({
+  url: TURSO_CONNECTION_URL,
+  authToken: TURSO_AUTH_TOKEN,
 });
 
-export const db = drizzle(pool);
+export const db = drizzle(client);
