@@ -1,6 +1,7 @@
 <script lang="ts">
     import userProfileSvg from '$lib/assets/user-profile.svg';
     import type {UserInfo} from "$lib/services/userSessions";
+    import LinkButton from "\$lib/components/linkButton.svelte";
 
     // todo nav elements will need to show as selected depending on path
     type NavLink = {
@@ -28,9 +29,7 @@
     <div id="nav-container">
         <ul id="nav-list">
             {#each navLinks as {href, name}}
-                <li>
-                    <a class="nav-link" href={href}>{name}</a>
-                </li>
+                <LinkButton href={href} text={name}/>
             {/each}
         </ul>
     </div>
@@ -73,22 +72,14 @@
     #nav-list {
         display: flex;
         list-style: none;
-        gap: 8px;
+        gap: 16px;
         padding: 0;
     }
 
-    .nav-link {
-        color: inherit;
-        text-decoration: inherit;
-        padding: 8px;
-        border: 1px solid black;
-        border-radius: 8px;
-    }
-
-    .nav-link:hover, .nav-link:focus {
-        border: 1px solid black;
-        background: gold;
-        outline: none;
+    @media only screen and (min-width: 600px) {
+        #nav-list {
+            gap: 24px;
+        }
     }
 
     #profile-menu {
