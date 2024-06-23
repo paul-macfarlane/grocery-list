@@ -1,22 +1,22 @@
 <script lang="ts">
+    import { page } from '$app/stores';
     import LinkButton from "\$lib/components/linkButton.svelte";
 </script>
 
 <main>
-    <h1>Login to Grocery List</h1>
-    <LinkButton href="/auth/google" text="Sign in with Google"/>
+    {#if $page.status === 404}
+        <h1>Page Not Found</h1>
+    {:else}
+        <h1>An Unexpected Error Occurred</h1>
+    {/if}
+
+    <LinkButton href="/" text="Return to home"/>
 </main>
 
 
 <style>
-    :global(body) {
-        width: 100vw;
-        height: 100vh;
-    }
-
     main {
-        width: 100%;
-        height: 100%;
+        padding: 8px;
         display: flex;
         flex-direction: column;
         justify-content: center;
