@@ -10,7 +10,7 @@
         <h1>An Unexpected Error Occurred</h1>
     {/if}
 
-    <LinkButton href="/" text="Return to home"/>
+    <LinkButton href="/" text="Return to home" color="primary"/>
 </main>
 
 

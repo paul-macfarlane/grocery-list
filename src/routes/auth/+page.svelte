@@ -4,7 +4,7 @@
 
 <main>
     <h1>Login to Grocery List</h1>
-    <LinkButton href="/auth/google" text="Sign in with Google"/>
+    <LinkButton href="/auth/google" text="Sign in with Google" color="primary"/>
 </main>
 
 
