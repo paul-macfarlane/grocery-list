@@ -3,7 +3,6 @@
     import type {UserInfo} from "$lib/services/userSessions";
     import LinkButton from "\$lib/components/linkButton.svelte";
 
-    // todo nav elements will need to show as selected depending on path
     type NavLink = {
         href: string
         name: string
@@ -19,9 +18,10 @@
         user: UserInfo
         navLinks: NavLink[]
         profileMenuLinks: ProfileMenuLink[]
+        pathname: string
     }
 
-    const {user, navLinks, profileMenuLinks}: NavbarProps = $props()
+    const {user, navLinks, profileMenuLinks, pathname}: NavbarProps = $props()
     let profileMenuOn = $state(false)
 </script>
 
@@ -29,7 +29,7 @@
     <div id="nav-container">
         <ul id="nav-list">
             {#each navLinks as {href, name}}
-                <LinkButton href={href} text={name}/>
+                <LinkButton {href} text={name} color={pathname === href ? "primary" : "secondary"}/>
             {/each}
         </ul>
     </div>
@@ -44,7 +44,7 @@
         {#if profileMenuOn}
             <ul class="profile-menu-group">
                 {#each profileMenuLinks as {href, name, icon}}
-                    <a class="profile-menu-link" href={href}>
+                    <a class="profile-menu-link" {href}>
                         <img class="profile-menu-icon" alt="logout" src={icon}>
                         <span>{name}</span>
                     </a>
@@ -60,7 +60,7 @@
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid black;
-        padding: 8px;
+        padding: 0 8px;
     }
 
     #nav-container {

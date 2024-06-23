@@ -7,14 +7,14 @@
     const navLinks = [
         {
             href: "/",
-            name: "Dashboard"
+            name: "Dashboard",
         },
         {
-            href: "/",
+            href: "/lists",
             name: "My Lists"
         },
         {
-            href: "/",
+            href: "/friends",
             name: "My Friends"
         }
     ]
@@ -28,7 +28,7 @@
     ]
 </script>
 
-<Navbar user={data.user} navLinks={navLinks} profileMenuLinks={profileMenuLinks}/>
+<Navbar user={data.user} {navLinks} {profileMenuLinks} pathname={data.pathname}/>
 
 <main>
     {@render children()}

@@ -2,21 +2,30 @@
     type LinkButtonProps = {
         href: string
         text: string
+        color: 'primary' | 'secondary'
     }
-    const {href, text}: LinkButtonProps = $props()
+    const {href, text, color}: LinkButtonProps = $props()
 </script>
 
-<a href={href}>{text}</a>
+<a class={`color-${color}`} href={href}>{text}</a>
 
 <style>
     a {
         text-decoration: inherit;
         color: inherit;
-        background-color: gold;
+
 
         border: 1px solid black;
         padding: 7px;
         border-radius: 4px;
+    }
+
+    .color-primary {
+        background-color: gold;
+    }
+
+    .color-secondary {
+        background-color: white;
     }
 
     a:hover, a:focus {
