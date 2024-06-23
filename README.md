@@ -9,13 +9,14 @@ The purpose of this app is to make shopping for me and my girlfriend easier. The
     - [x] add protected routes, add sign out, get session info in request
     - [x] add cleaner styling for login and root page
 - [ ] creating/editing a shopping list
-  - [ ] items include name, quantity description, image, and link. Only name and quantity are required
-  - [ ] lists can be tied to a specific grocery store
-  - [ ] items can have substitutes when the item is not available
+  - [ ] items include name, quantity, description, image, and link. Only name is required
+  - [ ] items can have substitutes when the item is not available (recursive, a can have substitutes with the same or different priorities)
   - [ ] users can send lists to other users
-  - [ ] lists can be collaborative
+  - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design
   - [ ] items can be grouped
   - [ ] users can add "shopping buddies" to send/share shopping lists
+  - [ ] lists can be recurring, they can also be copied/duplicated to a new list
+  - [ ] lists cam have budgets
 - [ ] executing a shopping list
   - [ ] a user can enter an interactive ui execute the list
   - [ ] mark items as complete
