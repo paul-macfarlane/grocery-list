@@ -9,7 +9,7 @@ The purpose of this app is to make shopping for me and my girlfriend easier. The
     - [x] add protected routes, add sign out, get session info in request
     - [x] add cleaner styling for login and root page
 - [ ] creating/editing a shopping list
-  - [ ] items include name, quantity, description, image, and link. Only name is required
+  - [ ] items include name, quantity, notes, image (eventually, need to decide on image storage), and link. Only name is required
   - [ ] items can have substitutes when the item is not available (recursive, a can have substitutes with the same or different priorities)
   - [ ] users can send lists to other users
   - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design

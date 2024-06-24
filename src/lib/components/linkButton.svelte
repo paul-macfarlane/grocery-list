@@ -21,11 +21,11 @@
     }
 
     .color-primary {
-        background-color: gold;
+        background-color: var(--color-primary);
     }
 
     .color-secondary {
-        background-color: white;
+        background-color: var(--color-secondary);
     }
 
     a:hover, a:focus {
