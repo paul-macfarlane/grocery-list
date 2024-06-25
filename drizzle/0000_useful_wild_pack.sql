@@ -1,4 +1,4 @@
-CREATE TABLE `grocery_list` (
+CREATE TABLE `grocery_lists` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`title` text(256) NOT NULL,
 	`created_by_user_id` text(256) NOT NULL,
@@ -7,16 +7,17 @@ CREATE TABLE `grocery_list` (
 	FOREIGN KEY (`created_by_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `grocery_list_item` (
+CREATE TABLE `grocery_list_items` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`grocery_list_id` integer NOT NULL,
-	`name` text,
+	`name` text(256) NOT NULL,
 	`quantity` integer,
+	`notes` text,
 	`link` text,
 	`created_by_user_id` text(256) NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`grocery_list_id`) REFERENCES `grocery_list`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`grocery_list_id`) REFERENCES `grocery_lists`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`created_by_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint

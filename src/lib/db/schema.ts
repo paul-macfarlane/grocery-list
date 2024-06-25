@@ -30,7 +30,7 @@ export const users = sqliteTable("users", {
     .$onUpdate(() => new Date()),
 });
 
-export const groceryList = sqliteTable("grocery_list", {
+export const groceryList = sqliteTable("grocery_lists", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title", { length: 256 }).notNull(),
   createdByUserId: text("created_by_user_id", { length: 256 })
@@ -45,14 +45,14 @@ export const groceryList = sqliteTable("grocery_list", {
     .$onUpdate(() => new Date()),
 });
 
-export const groceryListItem = sqliteTable("grocery_list_item", {
+export const groceryListItem = sqliteTable("grocery_list_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   groceryListId: integer("grocery_list_id")
     .notNull()
     .references(() => groceryList.id),
   name: text("name", { length: 256 }).notNull(),
   quantity: integer("quantity"),
-  notes: text("name"),
+  notes: text("notes"),
   link: text("link"),
   createdByUserId: text("created_by_user_id", { length: 256 })
     .notNull()

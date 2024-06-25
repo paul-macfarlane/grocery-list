@@ -60,7 +60,7 @@
     }
 </script>
 
-<form bind:this={form} method="POST" use:enhance={() => {
+<form bind:this={form} method="POST" action="/lists/new" use:enhance={() => {
     return async ({result}) => {
         // todo take result from validation and display errors if needed
         console.log(result)
