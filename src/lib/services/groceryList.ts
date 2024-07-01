@@ -1,39 +1,7 @@
 import { z } from "zod";
 import { db } from "$lib/db";
 import { groceryList, groceryListItem } from "$lib/db/schema";
-
-type CreateGroceryListItem = {
-  name: string;
-  quantity: number | null;
-  notes: string | null;
-  link: string | null;
-};
-
-type GroceryListItem = {
-  id: number;
-  groceryListId: number;
-  name: string;
-  quantity: number | null;
-  notes: string | null;
-  link: string | null;
-  createdByUserId: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-type CreateGroceryList = {
-  title: string;
-  items: CreateGroceryListItem[];
-};
-
-type GroceryList = {
-  id: number;
-  title: string;
-  items: GroceryListItem[];
-  createdByUserId: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import type { CreateGroceryList, GroceryList } from "$lib/types/groceryList";
 
 type ParseShoppingListFromFormRes = {
   data: CreateGroceryList;

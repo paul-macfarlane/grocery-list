@@ -96,14 +96,14 @@
     }
 
     #profile-pic {
-        border: 2px solid white;
         border-radius: 32px;
         height: 32px;
         width: 32px;
+        transition: transform 0.3s ease;
     }
 
     #profile-pic:hover, #profile-btn:focus-within #profile-pic {
-        border: 2px solid black;
+        transform: scale(1.25);
     }
 
     .profile-menu-group {

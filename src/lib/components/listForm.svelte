@@ -1,34 +1,28 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import type {GroceryList, GroceryListItem} from "$lib/types/groceryList";
+    import Button from './button.svelte';
+    import addSvg from '$lib/assets/add.svg'
+    import removeSvg from '$lib/assets/remove.svg'
 
-    // todo will eventually be a data type defined somewhere else, then imported here
-     type ListItem = {
-        name: string
-        quantity: number | null
-        notes: string | null
-        link: string | null
-    }
-
-    const EMPTY_LIST_ITEM = {
+    const EMPTY_LIST_ITEM : GroceryListItem = {
+        id: -1,
+        groceryListId: -1,
         name: "",
         quantity: null,
         notes: null,
-        link: null
-    }
-
-    // todo will eventually be a data type defined somewhere else, then imported here
-     type List = {
-        title: string
-        items: ListItem[]
+        link: null,
+        createdByUserId: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
     }
 
     type ListFormProps = {
-        initialList: List
+        groceryList: GroceryList
     }
 
-    // populate an initial list based on loaded data, but then leave the state of the form to be handled by the form thereafter
-    const {initialList}: ListFormProps = $props()
-    let activeList: List = $state(initialList)
+    const {groceryList}: ListFormProps = $props()
+    let activeList: GroceryList = $state(groceryList)
     let form: HTMLFormElement // todo can use this to programmatically submit via form.requestSubmit() when debouncing
 
     function onAddItem() {
@@ -70,9 +64,9 @@
         <label for="title">
             Title
         </label>
-        <input required name="title" type="text" value={initialList.title} placeholder="Title"/>
+        <input required name="title" type="text" value={groceryList.title} placeholder="Title"/>
 
-        <button type="button" onclick={onAddItem}>Add Item</button>
+        <button onclick={onAddItem} type="button" class="icon-btn"><img class="icon-btn-img" alt="add item" src={addSvg}></button>
     </div>
 
 
@@ -82,51 +76,63 @@
         <input type="hidden" name="count" value={activeList.items.length}/>
 
         <ul>
+            {#if (!activeList.items.length)}
+                No items in list
+            {/if}
+
             {#each activeList.items as _, i}
-                <li class="form-line">
-                    <label for={`name${i}`}>
-                        Name
-                    </label>
-                    <input
-                            value={activeList.items[i].name}
-                            required
-                            name={`name${i}`}
-                            type="text"
-                            oninput={(e) => onNameChange(e, i)}
-                    />
+                <li class="list-item">
+                    <div class="list-item-attribute">
+                        <label for={`name${i}`}>
+                            Name
+                        </label>
+                        <input
+                                value={activeList.items[i].name}
+                                required
+                                name={`name${i}`}
+                                type="text"
+                                oninput={(e) => onNameChange(e, i)}
+                        />
+                    </div>
 
-                    <label for={`quantity${i}`}>
-                        Quantity
-                    </label>
-                    <input
-                            value={activeList.items[i].quantity}
-                            name={`quantity${i}`}
-                            type="number"
-                            min={1}
-                            oninput={(e) => onQuantityChange(e, i)}
-                    />
+                    <div class="list-item-attribute">
+                        <label for={`quantity${i}`}>
+                            Quantity
+                        </label>
+                        <input
+                                value={activeList.items[i].quantity}
+                                name={`quantity${i}`}
+                                type="number"
+                                min={1}
+                                oninput={(e) => onQuantityChange(e, i)}
+                        />
+                    </div>
 
-                    <label for={`notes${i}`}>
-                        Notes
-                    </label>
-                    <input
-                            value={activeList.items[i].notes}
-                            name={`notes${i}`}
-                            type="text"
-                            oninput={(e) => onNotesChange(e, i)}
-                    />
+                    <div class="list-item-attribute">
+                        <label for={`notes${i}`}>
+                            Notes
+                        </label>
+                        <input
+                                value={activeList.items[i].notes}
+                                name={`notes${i}`}
+                                type="text"
+                                oninput={(e) => onNotesChange(e, i)}
+                        />
+                    </div>
 
-                    <label for={`link${i}`}>
-                        Link
-                    </label>
-                    <input
-                            value={activeList.items[i].link}
-                            name={`link${i}`}
-                            type="text"
-                            oninput={(e) => onLinkChange(e, i)}
-                    />
+                    <div class="list-item-attribute">
+                        <label for={`link${i}`}>
+                            Link
+                        </label>
+                        <input
+                                value={activeList.items[i].link}
+                                name={`link${i}`}
+                                type="text"
+                                oninput={(e) => onLinkChange(e, i)}
+                        />
+                    </div>
 
-                    <button onclick={onRemoveItem}>Remove</button>
+                    <button onclick={onRemoveItem} type="button" class="icon-btn remove-btn"><img class="icon-btn-img" alt="add item" src={removeSvg}></button>
                 </li>
             {/each}
         </ul>
@@ -139,6 +145,27 @@
     /** todo add styles to make this actually look good */
     #title-section {
         display: flex;
+        align-items: center;
+        gap: 8px
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        outline: none;
+    }
+
+    /* todo making icon buttons an component might be worth it at some point */
+    .icon-btn-img {
+        width: 32px;
+        height: 32px;
+        border-radius: 16px;
+        transition: transform 0.3s ease;
+    }
+
+    .icon-btn-img:hover, .icon-btn:focus-within .icon-btn-img {
+        transform: scale(1.25);
     }
 
     form {
@@ -158,5 +185,30 @@
     ul {
         list-style: none;
         padding: 0;
+    }
+
+    .list-item {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: baseline;
+        gap: 16px;
+        border: 1px solid black;
+        border-radius: 8px;
+        padding: 16px;
+    }
+
+    :global { /* todo see if there is a better way to make style apply to child */
+        .remove-btn {
+            width: min-content !important;
+            align-self: end !important;
+        }
+    }
+
+    .list-item-attribute {
+        display: flex;
+        justify-content: space-between;
+        align-self: stretch;
+        gap: 8px;
     }
 </style>
