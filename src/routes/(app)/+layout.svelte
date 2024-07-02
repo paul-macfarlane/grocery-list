@@ -37,6 +37,10 @@
 <style>
     main {
         margin: 0;
-        padding: 0 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
 </style>

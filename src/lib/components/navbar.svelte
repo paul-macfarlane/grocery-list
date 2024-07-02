@@ -29,7 +29,7 @@
     <div id="nav-container">
         <ul id="nav-list">
             {#each navLinks as {href, name}}
-                <LinkButton {href} text={name} color={pathname === href ? "primary" : "secondary"}/>
+                <LinkButton {href} text={name} color={(href === "/" && href === pathname) || (href !== "/" && pathname.startsWith(href)) ? "primary" : "secondary"}/>
             {/each}
         </ul>
     </div>
@@ -96,14 +96,14 @@
     }
 
     #profile-pic {
-        border: 2px solid white;
         border-radius: 32px;
         height: 32px;
         width: 32px;
+        transition: transform 0.3s ease;
     }
 
     #profile-pic:hover, #profile-btn:focus-within #profile-pic {
-        border: 2px solid black;
+        transform: scale(1.1);
     }
 
     .profile-menu-group {
@@ -130,7 +130,7 @@
     }
 
     .profile-menu-link:hover, .profile-menu-link:focus {
-        background: gold;
+        background: var(--color-primary);
         outline: none;
     }
 
