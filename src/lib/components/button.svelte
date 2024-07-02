@@ -15,34 +15,15 @@
 
 <style>
     button {
-        text-decoration: inherit;
-        color: inherit;
-
-
-        border: 1px solid black;
-        padding: 7px;
-        border-radius: 4px;
-    }
-
-    button:hover, button:focus {
-        outline: none;
-
-        border: 2px solid black;
-        padding: 6px;
-    }
-
-    @media only screen and (min-width: 600px) {
-        button {
             border: 2px solid black;
             border-radius: 6px;
             padding: 10px;
-        }
+    }
 
-        button:hover, button:focus {
-            border: 3px solid black;
-            padding: 9px;
-            outline: none;
-        }
+    button:hover, button:focus {
+        border: 3px solid black;
+        padding: 9px;
+        outline: none;
     }
 
     .color-primary {

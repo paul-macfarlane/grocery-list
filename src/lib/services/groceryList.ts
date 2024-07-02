@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { db } from "$lib/db";
 import { groceryList, groceryListItem } from "$lib/db/schema";
-import type { CreateGroceryList, GroceryList } from "$lib/types/groceryList";
+import type {
+  CreateGroceryList,
+  GroceryList,
+  GroceryListItem,
+} from "$lib/types/groceryList";
 
 type ParseShoppingListFromFormRes = {
   data: CreateGroceryList;
@@ -165,31 +169,34 @@ export async function createGroceryList(
       throw new Error("error accessing created grocery list");
     }
 
-    const groceryListItemsRes = await tx
-      .insert(groceryListItem)
-      .values(
-        data.items.map((item) => ({
-          groceryListId: groceryListRes[0].id,
-          name: item.name,
-          quantity: item.quantity,
-          notes: item.notes,
-          link: item.link,
-          createdByUserId: userId,
-        })),
-      )
-      .returning({
-        id: groceryListItem.id,
-        groceryListId: groceryListItem.groceryListId,
-        name: groceryListItem.name,
-        quantity: groceryListItem.quantity,
-        notes: groceryListItem.notes,
-        link: groceryListItem.link,
-        createdByUserId: groceryListItem.createdByUserId,
-        createdAt: groceryListItem.createdAt,
-        updatedAt: groceryListItem.updatedAt,
-      });
-    if (groceryListItemsRes.length !== data.items.length) {
-      throw new Error("error accessing created grocery list items");
+    let items: GroceryListItem[] = [];
+    if (data.items.length) {
+      items = await tx
+        .insert(groceryListItem)
+        .values(
+          data.items.map((item) => ({
+            groceryListId: groceryListRes[0].id,
+            name: item.name,
+            quantity: item.quantity,
+            notes: item.notes,
+            link: item.link,
+            createdByUserId: userId,
+          })),
+        )
+        .returning({
+          id: groceryListItem.id,
+          groceryListId: groceryListItem.groceryListId,
+          name: groceryListItem.name,
+          quantity: groceryListItem.quantity,
+          notes: groceryListItem.notes,
+          link: groceryListItem.link,
+          createdByUserId: groceryListItem.createdByUserId,
+          createdAt: groceryListItem.createdAt,
+          updatedAt: groceryListItem.updatedAt,
+        });
+      if (items.length !== data.items.length) {
+        throw new Error("error accessing created grocery list items");
+      }
     }
 
     return {
@@ -198,7 +205,7 @@ export async function createGroceryList(
       createdByUserId: groceryListRes[0].createdByUserId,
       createdAt: groceryListRes[0].createdAt,
       updatedAt: groceryListRes[0].updatedAt,
-      items: groceryListItemsRes,
+      items,
     };
   });
 }

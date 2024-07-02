@@ -64,7 +64,7 @@
         <label for="title">
             Title
         </label>
-        <input required name="title" type="text" value={groceryList.title} placeholder="Title"/>
+        <input id="title-input" required name="title" type="text" value={groceryList.title} placeholder="Title"/>
     </div>
 
     <div id="items-list">
@@ -75,7 +75,7 @@
         <input type="hidden" name="count" value={activeList.items.length}/>
 
         <ul>
-            {#if (!activeList.items.length)}
+            {#if  (!activeList.items.length)}
                 No items in list
             {/if}
 
@@ -86,6 +86,7 @@
                             Name
                         </label>
                         <input
+                                class="list-item-input"
                                 value={activeList.items[i].name}
                                 required
                                 name={`name${i}`}
@@ -99,6 +100,7 @@
                             Quantity
                         </label>
                         <input
+                                class="list-item-input"
                                 value={activeList.items[i].quantity}
                                 name={`quantity${i}`}
                                 type="number"
@@ -112,6 +114,7 @@
                             Notes
                         </label>
                         <input
+                                class="list-item-input"
                                 value={activeList.items[i].notes}
                                 name={`notes${i}`}
                                 type="text"
@@ -124,6 +127,7 @@
                             Link
                         </label>
                         <input
+                                class="list-item-input"
                                 value={activeList.items[i].link}
                                 name={`link${i}`}
                                 type="text"
@@ -138,7 +142,7 @@
 
     </div>
 
-    <Button color="primary">Save</Button>
+    <Button type="submit" color="primary">Save</Button>
 </form>
 
 <style>
@@ -225,7 +229,18 @@
     .list-item-attribute {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         align-self: stretch;
         gap: 8px;
+    }
+
+    .list-item-input {
+        padding: 4px;
+        font-size: 14px;
+    }
+
+    #title-input {
+        padding: 8px;
+        font-size: 16px;
     }
 </style>
