@@ -103,7 +103,7 @@
     }
 
     #profile-pic:hover, #profile-btn:focus-within #profile-pic {
-        transform: scale(1.25);
+        transform: scale(1.1);
     }
 
     .profile-menu-group {

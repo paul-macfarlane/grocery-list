@@ -65,14 +65,13 @@
             Title
         </label>
         <input required name="title" type="text" value={groceryList.title} placeholder="Title"/>
-
-        <button onclick={onAddItem} type="button" class="icon-btn"><img class="icon-btn-img" alt="add item" src={addSvg}></button>
     </div>
 
-
     <div id="items-list">
-        <h3>Items</h3>
-
+        <div id="items-header">
+            <p>Items</p>
+            <button onclick={onAddItem} type="button" class="icon-btn"><img class="icon-btn-img" alt="add item" src={addSvg}></button>
+        </div>
         <input type="hidden" name="count" value={activeList.items.length}/>
 
         <ul>
@@ -136,12 +135,19 @@
                 </li>
             {/each}
         </ul>
+
     </div>
 
-    <input type="submit"/>
+    <Button color="primary">Save</Button>
 </form>
 
 <style>
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
     /** todo add styles to make this actually look good */
     #title-section {
         display: flex;
@@ -154,6 +160,9 @@
         border: none;
         cursor: pointer;
         outline: none;
+        padding: 0;
+        height: min-content;
+        width: min-content;
     }
 
     /* todo making icon buttons an component might be worth it at some point */
@@ -165,7 +174,7 @@
     }
 
     .icon-btn-img:hover, .icon-btn:focus-within .icon-btn-img {
-        transform: scale(1.25);
+        transform: scale(1.1);
     }
 
     form {
@@ -182,9 +191,16 @@
         align-items: center;
     }
 
+    #items-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
     ul {
         list-style: none;
         padding: 0;
+        margin: 0;
     }
 
     .list-item {
@@ -196,6 +212,7 @@
         border: 1px solid black;
         border-radius: 8px;
         padding: 16px;
+        margin: 16px 0;
     }
 
     :global { /* todo see if there is a better way to make style apply to child */
