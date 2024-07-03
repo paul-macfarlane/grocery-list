@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { db } from "$lib/db";
-import { groceryList, groceryListItem } from "$lib/db/schema";
+import { groceryLists, groceryListItems } from "$lib/db/schema";
 import type {
   CreateGroceryList,
   GroceryList,
   GroceryListItem,
 } from "$lib/types/groceryList";
+import { eq } from "drizzle-orm";
 
 type ParseShoppingListFromFormRes = {
   data: CreateGroceryList;
@@ -153,17 +154,17 @@ export async function createGroceryList(
 ): Promise<GroceryList> {
   return db.transaction(async (tx) => {
     const groceryListRes = await tx
-      .insert(groceryList)
+      .insert(groceryLists)
       .values({
         title: data.title,
         createdByUserId: userId,
       })
       .returning({
-        id: groceryList.id,
-        title: groceryList.title,
-        createdByUserId: groceryList.createdByUserId,
-        createdAt: groceryList.createdAt,
-        updatedAt: groceryList.updatedAt,
+        id: groceryLists.id,
+        title: groceryLists.title,
+        createdByUserId: groceryLists.createdByUserId,
+        createdAt: groceryLists.createdAt,
+        updatedAt: groceryLists.updatedAt,
       });
     if (!groceryListRes.length) {
       throw new Error("error accessing created grocery list");
@@ -172,7 +173,7 @@ export async function createGroceryList(
     let items: GroceryListItem[] = [];
     if (data.items.length) {
       items = await tx
-        .insert(groceryListItem)
+        .insert(groceryListItems)
         .values(
           data.items.map((item) => ({
             groceryListId: groceryListRes[0].id,
@@ -184,15 +185,15 @@ export async function createGroceryList(
           })),
         )
         .returning({
-          id: groceryListItem.id,
-          groceryListId: groceryListItem.groceryListId,
-          name: groceryListItem.name,
-          quantity: groceryListItem.quantity,
-          notes: groceryListItem.notes,
-          link: groceryListItem.link,
-          createdByUserId: groceryListItem.createdByUserId,
-          createdAt: groceryListItem.createdAt,
-          updatedAt: groceryListItem.updatedAt,
+          id: groceryListItems.id,
+          groceryListId: groceryListItems.groceryListId,
+          name: groceryListItems.name,
+          quantity: groceryListItems.quantity,
+          notes: groceryListItems.notes,
+          link: groceryListItems.link,
+          createdByUserId: groceryListItems.createdByUserId,
+          createdAt: groceryListItems.createdAt,
+          updatedAt: groceryListItems.updatedAt,
         });
       if (items.length !== data.items.length) {
         throw new Error("error accessing created grocery list items");
@@ -208,4 +209,46 @@ export async function createGroceryList(
       items,
     };
   });
+}
+
+export async function getGroceryListsByUserId(
+  userId: string,
+): Promise<GroceryList[]> {
+  const rows = await db
+    .select()
+    .from(groceryLists)
+    .innerJoin(
+      groceryListItems,
+      eq(groceryLists.id, groceryListItems.groceryListId),
+    )
+    .where(eq(groceryLists.createdByUserId, userId));
+
+  const records = rows.reduce<Record<number, GroceryList>>((acc, row) => {
+    if (!acc[row.grocery_lists.id]) {
+      acc[row.grocery_lists.id] = {
+        id: row.grocery_lists.id,
+        title: row.grocery_lists.title,
+        items: [],
+        createdByUserId: row.grocery_lists.createdByUserId,
+        createdAt: row.grocery_lists.createdAt,
+        updatedAt: row.grocery_lists.updatedAt,
+      };
+    }
+
+    acc[row.grocery_lists.id].items.push({
+      id: row.grocery_list_items.id,
+      groceryListId: row.grocery_list_items.groceryListId,
+      name: row.grocery_list_items.name,
+      quantity: row.grocery_list_items.quantity,
+      notes: row.grocery_list_items.notes,
+      link: row.grocery_list_items.link,
+      createdByUserId: row.grocery_list_items.createdByUserId,
+      createdAt: row.grocery_list_items.createdAt,
+      updatedAt: row.grocery_list_items.updatedAt,
+    });
+
+    return acc;
+  }, {});
+
+  return Object.values(records);
 }

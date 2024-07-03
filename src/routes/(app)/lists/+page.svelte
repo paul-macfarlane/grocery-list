@@ -1,8 +1,8 @@
 <script lang="ts">
     import LinkButton from "\$lib/components/linkButton.svelte";
 
+    let {data} = $props()
     // todo clean up styling
-    // todo fetch real list data (in loader file)
 </script>
 
 <header id="lists-header">
@@ -14,15 +14,11 @@
 </header>
 
 <ul>
-    <li>
-        Fake List 1
-    </li>
-    <li>
-        Fake List 2
-    </li>
-    <li>
-        Fake List 3
-    </li>
+    {#each data.groceryLists as groceryList}
+        <li>
+            {groceryList.title}
+        </li>
+    {/each}
 </ul>
 
 

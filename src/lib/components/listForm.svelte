@@ -4,6 +4,7 @@
     import Button from './button.svelte';
     import addSvg from '$lib/assets/add.svg'
     import removeSvg from '$lib/assets/remove.svg'
+    import { goto } from '$app/navigation';
 
     const EMPTY_LIST_ITEM : GroceryListItem = {
         id: -1,
@@ -56,10 +57,11 @@
 
 <form bind:this={form} method="POST" action="/lists/new" use:enhance={() => {
     return async ({result}) => {
-        // todo take result from validation and display errors if needed
-        console.log(result)
-    }
-}}>
+        if (result.status === 204) {
+            void goto("/lists")
+        }
+    }}}
+>
     <div id="title-section">
         <label for="title">
             Title
