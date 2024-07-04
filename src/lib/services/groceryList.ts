@@ -16,7 +16,7 @@ type ParseShoppingListFromFormRes = {
 export function parseGroceryListFromFormData(
   formData: FormData,
 ): ParseShoppingListFromFormRes {
-  let response: ParseShoppingListFromFormRes = {
+  const response: ParseShoppingListFromFormRes = {
     data: {
       id: null,
       title: "",

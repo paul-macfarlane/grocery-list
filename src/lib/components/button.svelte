@@ -5,7 +5,7 @@
     color: "primary" | "secondary";
     onclick?: MouseEventHandler<HTMLButtonElement>;
     classNames?: string;
-    children: any;
+    children: unknown;
     type?: "button" | "submit" | "reset";
   };
   const { color, onclick, classNames, children, type }: ButtonProps = $props();
