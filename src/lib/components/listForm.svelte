@@ -170,12 +170,6 @@
 </form>
 
 <style>
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
   #title-section {
     display: flex;
     align-items: center;
@@ -185,6 +179,7 @@
   form {
     display: flex;
     flex-direction: column;
+    gap: 16px;
     justify-content: center;
     align-items: center;
   }

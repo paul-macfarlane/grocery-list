@@ -26,7 +26,6 @@
   }
 
   .icon-btn-img {
-    /* width and height can be easily overridden by parent component as needed using imageClass with !important */
     width: 32px;
     height: 32px;
     border-radius: 16px;
