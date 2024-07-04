@@ -1,37 +1,35 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
-    import type {GroceryList, GroceryListItem} from "$lib/types/groceryList";
+    import type {
+        GroceryListFormData,
+    } from "$lib/types/groceryList";
     import Button from './button.svelte';
+    import IconButton from './iconButton.svelte';
     import addSvg from '$lib/assets/add.svg'
     import removeSvg from '$lib/assets/remove.svg'
     import { goto } from '$app/navigation';
 
-    const EMPTY_LIST_ITEM : GroceryListItem = {
-        id: -1,
-        groceryListId: -1,
-        name: "",
-        quantity: null,
-        notes: null,
-        link: null,
-        createdByUserId: "",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    }
-
     type ListFormProps = {
-        groceryList: GroceryList
+        groceryList: GroceryListFormData
     }
 
     const {groceryList}: ListFormProps = $props()
-    let activeList: GroceryList = $state(groceryList)
+    let activeList: GroceryListFormData = $state(groceryList)
     let form: HTMLFormElement // todo can use this to programmatically submit via form.requestSubmit() when debouncing
 
     function onAddItem() {
-        activeList.items.push(EMPTY_LIST_ITEM)
+        activeList.items.push({
+            listKey: crypto.randomUUID(),
+            id: null,
+            name: "",
+            quantity: null,
+            notes: null,
+            link: null,
+        })
     }
 
-    function onRemoveItem() {
-        activeList.items.pop()
+    function onRemoveItem(itemListKey: string) {
+        activeList.items = activeList.items.filter(({listKey}) => itemListKey !== listKey)
     }
 
     function onNameChange(e: {currentTarget: HTMLInputElement}, i: number) {
@@ -55,13 +53,19 @@
     }
 </script>
 
-<form bind:this={form} method="POST" action="/lists/new" use:enhance={() => {
+<form bind:this={form} method="POST" action="/lists/save" use:enhance={() => {
     return async ({result}) => {
-        if (result.status === 204) {
+        if (result.status === 400) {
+            // todo display validation errors
+        } else if (result.status === 204) {
             void goto("/lists")
+        } else {
+            // todo display error
         }
     }}}
 >
+    <input type="hidden" name="id" value={groceryList.id}>
+
     <div id="title-section">
         <label for="title">
             Title
@@ -72,17 +76,19 @@
     <div id="items-list">
         <div id="items-header">
             <p>Items</p>
-            <button onclick={onAddItem} type="button" class="icon-btn"><img class="icon-btn-img" alt="add item" src={addSvg}></button>
+            <IconButton onclick={onAddItem} type="button" alt="add item" src={addSvg}/>
         </div>
         <input type="hidden" name="count" value={activeList.items.length}/>
 
         <ul>
-            {#if  (!activeList.items.length)}
+            {#if !activeList.items.length}
                 No items in list
             {/if}
 
-            {#each activeList.items as _, i}
+            {#each activeList.items as {listKey}, i (listKey)}
                 <li class="list-item">
+                    <input type="hidden" name={`itemId${i}`} value={activeList.items[i].id}>
+
                     <div class="list-item-attribute">
                         <label for={`name${i}`}>
                             Name
@@ -137,7 +143,7 @@
                         />
                     </div>
 
-                    <button onclick={onRemoveItem} type="button" class="icon-btn remove-btn"><img class="icon-btn-img" alt="add item" src={removeSvg}></button>
+                    <IconButton onclick={() => onRemoveItem(listKey)} type="button" buttonClass="remove-btn" alt="remove item" src={removeSvg}/>
                 </li>
             {/each}
         </ul>
@@ -154,33 +160,10 @@
         gap: 16px;
     }
 
-    /** todo add styles to make this actually look good */
     #title-section {
         display: flex;
         align-items: center;
         gap: 8px
-    }
-
-    .icon-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        outline: none;
-        padding: 0;
-        height: min-content;
-        width: min-content;
-    }
-
-    /* todo making icon buttons an component might be worth it at some point */
-    .icon-btn-img {
-        width: 32px;
-        height: 32px;
-        border-radius: 16px;
-        transition: transform 0.3s ease;
-    }
-
-    .icon-btn-img:hover, .icon-btn:focus-within .icon-btn-img {
-        transform: scale(1.1);
     }
 
     form {
@@ -221,7 +204,7 @@
         margin: 16px 0;
     }
 
-    :global { /* todo see if there is a better way to make style apply to child */
+    :global {
         .remove-btn {
             width: min-content !important;
             align-self: end !important;

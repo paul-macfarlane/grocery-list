@@ -1,15 +1,12 @@
 import { z } from "zod";
 import { db } from "$lib/db";
 import { groceryLists, groceryListItems } from "$lib/db/schema";
-import type {
-  CreateGroceryList,
-  GroceryList,
-  GroceryListItem,
-} from "$lib/types/groceryList";
-import { eq } from "drizzle-orm";
+import type { GroceryList, UpsertGroceryList } from "$lib/types/groceryList";
+import { and, eq, notInArray, sql } from "drizzle-orm";
+import { validateAndTransformStrToNum } from "$lib/services/validators";
 
 type ParseShoppingListFromFormRes = {
-  data: CreateGroceryList;
+  data: UpsertGroceryList;
   errorMap: Map<string, string>;
 };
 
@@ -21,29 +18,44 @@ export function parseGroceryListFromFormData(
 ): ParseShoppingListFromFormRes {
   let response: ParseShoppingListFromFormRes = {
     data: {
+      id: null,
       title: "",
       items: [],
     },
     errorMap: new Map<string, string>(),
   };
 
-  const countCheck = z
-    .string()
-    .refine(
-      (val) => {
-        const parsed = parseInt(val, 10);
-        return !isNaN(parsed) && parsed.toString() === val;
-      },
-      {
-        message: "must be a number",
-      },
-    )
-    .transform((val) => parseInt(val, 10))
-    .safeParse(formData.get("count"));
+  const countCheck = validateAndTransformStrToNum.safeParse(
+    formData.get("count"),
+  );
   if (!countCheck.success) {
     throw new Error(
       `internal form data error: ${countCheck.error.errors.join(",")}`,
     );
+  }
+
+  const idCheck = z
+    .string({ message: "must exist as an input" })
+    .refine(
+      (val) =>
+        val === "" ||
+        (!isNaN(parseInt(val, 10)) && parseInt(val, 10).toString() === val),
+      {
+        message: "must be a number",
+      },
+    )
+    .transform((val) => {
+      if (val === null || val === "") {
+        return null;
+      }
+
+      return parseInt(val, 10);
+    })
+    .safeParse(formData.get(`id`));
+  if (idCheck.success) {
+    response.data.id = idCheck.data;
+  } else {
+    response.errorMap.set(`id`, idCheck.error.errors.join(","));
   }
 
   const count = countCheck.data;
@@ -59,6 +71,31 @@ export function parseGroceryListFromFormData(
   }
 
   for (let i = 0; i < count; i++) {
+    const itemIdCheck = z
+      .string({ message: "must exist as an input" })
+      .refine(
+        (val) =>
+          val === "" ||
+          (!isNaN(parseInt(val, 10)) && parseInt(val, 10).toString() === val),
+        {
+          message: "must be a number",
+        },
+      )
+      .transform((val) => {
+        if (val === null || val === "") {
+          return null;
+        }
+
+        return parseInt(val, 10);
+      })
+      .safeParse(formData.get(`itemId${i}`));
+    let itemId: number | null = null;
+    if (itemIdCheck.success) {
+      itemId = itemIdCheck.data;
+    } else {
+      response.errorMap.set(`itemId${i}`, itemIdCheck.error.errors.join(","));
+    }
+
     const nameCheck = z
       .string({ message: "must exist as an input" })
       .min(1, "is required")
@@ -138,6 +175,7 @@ export function parseGroceryListFromFormData(
     }
 
     response.data.items.push({
+      id: itemId,
       name,
       quantity,
       notes,
@@ -148,16 +186,23 @@ export function parseGroceryListFromFormData(
   return response;
 }
 
-export async function createGroceryList(
-  data: CreateGroceryList,
+export async function upsertGroceryList(
+  upsertGroceryList: UpsertGroceryList,
   userId: string,
-): Promise<GroceryList> {
-  return db.transaction(async (tx) => {
+): Promise<void> {
+  await db.transaction(async (tx) => {
     const groceryListRes = await tx
       .insert(groceryLists)
       .values({
-        title: data.title,
+        id: upsertGroceryList.id ?? undefined,
+        title: upsertGroceryList.title,
         createdByUserId: userId,
+      })
+      .onConflictDoUpdate({
+        target: groceryLists.id,
+        set: {
+          title: upsertGroceryList.title,
+        },
       })
       .returning({
         id: groceryLists.id,
@@ -166,16 +211,32 @@ export async function createGroceryList(
         createdAt: groceryLists.createdAt,
         updatedAt: groceryLists.updatedAt,
       });
-    if (!groceryListRes.length) {
-      throw new Error("error accessing created grocery list");
+
+    const existingItemIds = upsertGroceryList.items
+      .filter((i) => i.id)
+      .map((i) => i.id!);
+    if (upsertGroceryList.id && existingItemIds.length) {
+      await tx
+        .delete(groceryListItems)
+        .where(
+          and(
+            eq(groceryListItems.groceryListId, upsertGroceryList.id),
+            notInArray(groceryListItems.id, existingItemIds),
+          ),
+        );
+    }
+    if (upsertGroceryList.id && !upsertGroceryList.items.length) {
+      await tx
+        .delete(groceryListItems)
+        .where(eq(groceryListItems.groceryListId, upsertGroceryList.id));
     }
 
-    let items: GroceryListItem[] = [];
-    if (data.items.length) {
-      items = await tx
+    if (upsertGroceryList.items.length) {
+      await tx
         .insert(groceryListItems)
         .values(
-          data.items.map((item) => ({
+          upsertGroceryList.items.map((item) => ({
+            id: item.id ?? undefined,
             groceryListId: groceryListRes[0].id,
             name: item.name,
             quantity: item.quantity,
@@ -184,30 +245,16 @@ export async function createGroceryList(
             createdByUserId: userId,
           })),
         )
-        .returning({
-          id: groceryListItems.id,
-          groceryListId: groceryListItems.groceryListId,
-          name: groceryListItems.name,
-          quantity: groceryListItems.quantity,
-          notes: groceryListItems.notes,
-          link: groceryListItems.link,
-          createdByUserId: groceryListItems.createdByUserId,
-          createdAt: groceryListItems.createdAt,
-          updatedAt: groceryListItems.updatedAt,
+        .onConflictDoUpdate({
+          target: groceryListItems.id,
+          set: {
+            name: sql.raw(`excluded.${groceryListItems.name.name}`),
+            quantity: sql.raw(`excluded.${groceryListItems.quantity.name}`),
+            notes: sql.raw(`excluded.${groceryListItems.notes.name}`),
+            link: sql.raw(`excluded.${groceryListItems.link.name}`),
+          },
         });
-      if (items.length !== data.items.length) {
-        throw new Error("error accessing created grocery list items");
-      }
     }
-
-    return {
-      id: groceryListRes[0].id,
-      title: groceryListRes[0].title,
-      createdByUserId: groceryListRes[0].createdByUserId,
-      createdAt: groceryListRes[0].createdAt,
-      updatedAt: groceryListRes[0].updatedAt,
-      items,
-    };
   });
 }
 
@@ -217,7 +264,7 @@ export async function getGroceryListsByUserId(
   const rows = await db
     .select()
     .from(groceryLists)
-    .innerJoin(
+    .leftJoin(
       groceryListItems,
       eq(groceryLists.id, groceryListItems.groceryListId),
     )
@@ -235,20 +282,86 @@ export async function getGroceryListsByUserId(
       };
     }
 
-    acc[row.grocery_lists.id].items.push({
-      id: row.grocery_list_items.id,
-      groceryListId: row.grocery_list_items.groceryListId,
-      name: row.grocery_list_items.name,
-      quantity: row.grocery_list_items.quantity,
-      notes: row.grocery_list_items.notes,
-      link: row.grocery_list_items.link,
-      createdByUserId: row.grocery_list_items.createdByUserId,
-      createdAt: row.grocery_list_items.createdAt,
-      updatedAt: row.grocery_list_items.updatedAt,
-    });
+    if (row.grocery_list_items) {
+      acc[row.grocery_lists.id].items.push({
+        id: row.grocery_list_items.id,
+        groceryListId: row.grocery_list_items.groceryListId,
+        name: row.grocery_list_items.name,
+        quantity: row.grocery_list_items.quantity,
+        notes: row.grocery_list_items.notes,
+        link: row.grocery_list_items.link,
+        createdByUserId: row.grocery_list_items.createdByUserId,
+        createdAt: row.grocery_list_items.createdAt,
+        updatedAt: row.grocery_list_items.updatedAt,
+      });
+    }
 
     return acc;
   }, {});
 
   return Object.values(records);
+}
+
+export async function deleteGroceryList(
+  userId: string,
+  groceryListId: number,
+): Promise<void> {
+  await db
+    .delete(groceryLists)
+    .where(
+      and(
+        eq(groceryLists.id, groceryListId),
+        eq(groceryLists.createdByUserId, userId),
+      ),
+    );
+}
+
+export async function getGroceryListById(
+  userId: string,
+  groceryListId: number,
+): Promise<GroceryList> {
+  const rows = await db
+    .select()
+    .from(groceryLists)
+    .leftJoin(
+      groceryListItems,
+      eq(groceryLists.id, groceryListItems.groceryListId),
+    )
+    .where(
+      and(
+        eq(groceryLists.createdByUserId, userId),
+        eq(groceryLists.id, groceryListId),
+      ),
+    );
+
+  const records = rows.reduce<Record<number, GroceryList>>((acc, row) => {
+    if (!acc[row.grocery_lists.id]) {
+      acc[row.grocery_lists.id] = {
+        id: row.grocery_lists.id,
+        title: row.grocery_lists.title,
+        items: [],
+        createdByUserId: row.grocery_lists.createdByUserId,
+        createdAt: row.grocery_lists.createdAt,
+        updatedAt: row.grocery_lists.updatedAt,
+      };
+    }
+
+    if (row.grocery_list_items) {
+      acc[row.grocery_lists.id].items.push({
+        id: row.grocery_list_items.id,
+        groceryListId: row.grocery_list_items.groceryListId,
+        name: row.grocery_list_items.name,
+        quantity: row.grocery_list_items.quantity,
+        notes: row.grocery_list_items.notes,
+        link: row.grocery_list_items.link,
+        createdByUserId: row.grocery_list_items.createdByUserId,
+        createdAt: row.grocery_list_items.createdAt,
+        updatedAt: row.grocery_list_items.updatedAt,
+      });
+    }
+
+    return acc;
+  }, {});
+
+  return Object.values(records)[0];
 }

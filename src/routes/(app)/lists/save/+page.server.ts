@@ -1,7 +1,7 @@
 import type { Actions } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
 import {
-  createGroceryList,
+  upsertGroceryList,
   parseGroceryListFromFormData,
 } from "$lib/services/groceryList";
 import { getUserForSession } from "$lib/services/userSessions";
@@ -19,6 +19,6 @@ export const actions = {
       return fail(400, { errorMap: res.errorMap });
     }
 
-    await createGroceryList(res.data, user.id);
+    await upsertGroceryList(res.data, user.id);
   },
 } satisfies Actions;
