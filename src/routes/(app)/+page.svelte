@@ -1,5 +1,5 @@
 <script lang="ts">
-    let {data} = $props()
+  let { data } = $props();
 </script>
 
-<p>Welcome {data.user.firstName}!</p>
+<h2>Welcome {data.user.firstName}!</h2>

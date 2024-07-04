@@ -27,24 +27,6 @@ export async function createUserSession(user: UserInfo): Promise<UserSession> {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
   return db.transaction(async (tx) => {
-    const userSession = await tx
-      .insert(userSessions)
-      .values({
-        id: sessionId,
-        userId: user.id,
-        csrfToken,
-        authProvider: user.authProvider,
-        expiresAt,
-      })
-      .returning({
-        id: userSessions.id,
-        userId: userSessions.id,
-        csrfToken: userSessions.csrfToken,
-        authProvider: userSessions.authProvider,
-        expiresAt: userSessions.expiresAt,
-        createdAt: userSessions.createdAt,
-      });
-
     await tx
       .insert(users)
       .values({
@@ -63,6 +45,24 @@ export async function createUserSession(user: UserInfo): Promise<UserSession> {
           lastName: user.lastName,
           profilePicUrl: user.profilePicUrl,
         },
+      });
+
+    const userSession = await tx
+      .insert(userSessions)
+      .values({
+        id: sessionId,
+        userId: user.id,
+        csrfToken,
+        authProvider: user.authProvider,
+        expiresAt,
+      })
+      .returning({
+        id: userSessions.id,
+        userId: userSessions.id,
+        csrfToken: userSessions.csrfToken,
+        authProvider: userSessions.authProvider,
+        expiresAt: userSessions.expiresAt,
+        createdAt: userSessions.createdAt,
       });
 
     return userSession[0];
