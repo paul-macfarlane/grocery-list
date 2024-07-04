@@ -26,3 +26,9 @@ client_secret*
 
 # local db files
 local.db*
+
+package-lock.json
+
+
+
+
