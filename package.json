@@ -11,7 +11,8 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "db:generate": "npx drizzle-kit generate",
-    "db:migrate": "npx tsx src/lib/db/migrate.ts"
+    "db:migrate": "npx tsx src/lib/db/migrate.ts",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.0.0",

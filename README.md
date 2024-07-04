@@ -38,3 +38,5 @@ This app is built using [Node.js](https://nodejs.org/en), [SvelteKit](https://ki
 5. Install node dependencies `npm i`
 6. Setup db schema by running `npm run db:generate && npm run db:migrate`
 7. Run application using `npm run dev`
+
+If you plan on contributing also make sure to run `npm run prepare` to setup the husky commit hook.
