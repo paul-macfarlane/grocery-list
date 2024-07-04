@@ -4,12 +4,12 @@
 
 The purpose of this app is to make shopping for me and my girlfriend easier. The list of expected features are
 
-- [X] authentication
-  - [X] users can log in with social accounts
-    - [X] add protected routes, add sign out, get session info in request
-    - [X] add cleaner styling for login and root page
+- [x] authentication
+  - [x] users can log in with social accounts
+    - [x] add protected routes, add sign out, get session info in request
+    - [x] add cleaner styling for login and root page
 - [ ] creating/editing a shopping list
-  - [X] items can be created, edited, and deleted and include name, quantity, notes, and link. Only name is required
+  - [x] items can be created, edited, and deleted and include name, quantity, notes, and link. Only name is required
   - [ ] items can have substitutes when the item is not available (recursive, a can have substitutes with the same or different priorities)
   - [ ] users can send lists to other users
   - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design
@@ -24,7 +24,7 @@ The purpose of this app is to make shopping for me and my girlfriend easier. The
   - [ ] replace items
   - [ ] user can still edit/add to the list during execution
 - [ ] non-feature related work
-  - [X] migrate from PostgreSQL to Turso for cheaper db hosting in the future
+  - [x] migrate from PostgreSQL to Turso for cheaper db hosting in the future
   - [ ] host the application on the web
 
 ## Local Setup
