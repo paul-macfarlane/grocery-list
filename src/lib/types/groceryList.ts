@@ -18,27 +18,30 @@ export type GroceryListItem = {
   updatedAt: Date;
 };
 
+export type GroceryListFormItem = UpsertGroceryListItem & {
+  listKey: string; // needed because each item needs a key so it can be re-arranged as users edit a list
+};
+
 export type UpsertGroceryList = {
   id: number | null;
   title: string;
+  budget: number | null;
   items: UpsertGroceryListItem[];
 };
 
 export type GroceryList = {
   id: number;
   title: string;
+  budget: number | null;
   items: GroceryListItem[];
   createdByUserId: string;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type GroceryListFormItem = UpsertGroceryListItem & {
-  listKey: string; // needed because each item needs a key so it can be re-arranged as users edit a list
-};
-
 export type GroceryListFormData = {
   id: number | null;
+  budget: number | null;
   title: string;
   items: GroceryListFormItem[];
 };

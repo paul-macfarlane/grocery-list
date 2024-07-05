@@ -60,10 +60,12 @@
   use:enhance={() => {
     return async ({ result }) => {
       if (result.status === 400) {
+        // console.error(result);
         // todo display validation errors
       } else if (result.status === 204) {
         void goto("/lists");
       } else {
+        // console.error(result);
         // todo display error
       }
     };
@@ -72,15 +74,30 @@
   <input type="hidden" name="id" value={groceryList.id} />
 
   <div id="title-section">
-    <label for="title"> Title </label>
-    <input
-      id="title-input"
-      required
-      name="title"
-      type="text"
-      value={groceryList.title}
-      placeholder="Title"
-    />
+    <div class="title-section-item">
+      <label for="title"> Title </label>
+      <input
+        class="title-section-input"
+        required
+        name="title"
+        type="text"
+        value={groceryList.title}
+        placeholder="Title"
+      />
+    </div>
+
+    <div class="title-section-item">
+      <label for="budget"> Budget </label>
+      <input
+        class="title-section-input"
+        name="budget"
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        value={groceryList.budget}
+        min="0.00"
+      />
+    </div>
   </div>
 
   <div id="items-list">
@@ -117,6 +134,7 @@
               name={`name${i}`}
               type="text"
               oninput={(e) => onNameChange(e, i)}
+              placeholder="name"
             />
           </div>
 
@@ -129,6 +147,7 @@
               type="number"
               min={1}
               oninput={(e) => onQuantityChange(e, i)}
+              placeholder="1"
             />
           </div>
 
@@ -140,6 +159,7 @@
               name={`notes${i}`}
               type="text"
               oninput={(e) => onNotesChange(e, i)}
+              placeholder="notes"
             />
           </div>
 
@@ -151,6 +171,7 @@
               name={`link${i}`}
               type="text"
               oninput={(e) => onLinkChange(e, i)}
+              placeholder="https://google.com"
             />
           </div>
 
@@ -172,8 +193,23 @@
 <style>
   #title-section {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    align-items: baseline;
     gap: 8px;
+  }
+
+  .title-section-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    align-self: stretch;
+    gap: 8px;
+  }
+
+  .title-section-input {
+    padding: 8px;
+    font-size: 16px;
   }
 
   form {
@@ -233,10 +269,5 @@
   .list-item-input {
     padding: 4px;
     font-size: 14px;
-  }
-
-  #title-input {
-    padding: 8px;
-    font-size: 16px;
   }
 </style>

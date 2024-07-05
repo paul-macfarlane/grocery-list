@@ -20,6 +20,7 @@ export function parseGroceryListFromFormData(
     data: {
       id: null,
       title: "",
+      budget: null,
       items: [],
     },
     errorMap: new Map<string, string>(),
@@ -30,7 +31,7 @@ export function parseGroceryListFromFormData(
   );
   if (!countCheck.success) {
     throw new Error(
-      `internal form data error: ${countCheck.error.errors.join(",")}`,
+      `internal form data error: ${countCheck.error.errors.map((err) => err.message).join(",")}`,
     );
   }
 
@@ -55,7 +56,10 @@ export function parseGroceryListFromFormData(
   if (idCheck.success) {
     response.data.id = idCheck.data;
   } else {
-    response.errorMap.set(`id`, idCheck.error.errors.join(","));
+    response.errorMap.set(
+      `id`,
+      idCheck.error.errors.map((err) => err.message).join(","),
+    );
   }
 
   const count = countCheck.data;
@@ -67,7 +71,35 @@ export function parseGroceryListFromFormData(
   if (titleCheck.success) {
     response.data.title = titleCheck.data;
   } else {
-    response.errorMap.set("title", titleCheck.error.errors.join(","));
+    response.errorMap.set(
+      "title",
+      titleCheck.error.errors.map((err) => err.message).join(","),
+    );
+  }
+
+  const budgetCheck = z
+    .string({ message: "must exist as an input" })
+    .refine(
+      (val) => val === "" || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0),
+      {
+        message: "must be a number greater than or equal to 0",
+      },
+    )
+    .transform((val) => {
+      if (val === null || val === "") {
+        return null;
+      }
+
+      return parseFloat(val);
+    })
+    .safeParse(formData.get("budget"));
+  if (budgetCheck.success) {
+    response.data.budget = budgetCheck.data;
+  } else {
+    response.errorMap.set(
+      "budget",
+      budgetCheck.error.errors.map((err) => err.message).join(","),
+    );
   }
 
   for (let i = 0; i < count; i++) {
@@ -93,7 +125,10 @@ export function parseGroceryListFromFormData(
     if (itemIdCheck.success) {
       itemId = itemIdCheck.data;
     } else {
-      response.errorMap.set(`itemId${i}`, itemIdCheck.error.errors.join(","));
+      response.errorMap.set(
+        `itemId${i}`,
+        itemIdCheck.error.errors.map((err) => err.message).join(","),
+      );
     }
 
     const nameCheck = z
@@ -105,7 +140,10 @@ export function parseGroceryListFromFormData(
     if (nameCheck.success) {
       name = nameCheck.data;
     } else {
-      response.errorMap.set(`name${i}`, nameCheck.error.errors.join(","));
+      response.errorMap.set(
+        `name${i}`,
+        nameCheck.error.errors.map((err) => err.message).join(","),
+      );
     }
 
     const quantityCheck = z
@@ -134,7 +172,7 @@ export function parseGroceryListFromFormData(
     } else {
       response.errorMap.set(
         `quantity${i}`,
-        quantityCheck.error.errors.join(","),
+        quantityCheck.error.errors.map((err) => err.message).join(","),
       );
     }
 
@@ -153,7 +191,10 @@ export function parseGroceryListFromFormData(
     if (notesCheck.success) {
       notes = notesCheck.data;
     } else {
-      response.errorMap.set(`notes${i}`, notesCheck.error.errors.join(","));
+      response.errorMap.set(
+        `notes${i}`,
+        notesCheck.error.errors.map((err) => err.message).join(","),
+      );
     }
 
     const linkCheck = z
@@ -171,7 +212,10 @@ export function parseGroceryListFromFormData(
     if (linkCheck.success) {
       link = linkCheck.data;
     } else {
-      response.errorMap.set(`link${i}`, linkCheck.error.errors.join(","));
+      response.errorMap.set(
+        `link${i}`,
+        linkCheck.error.errors.map((err) => err.message).join(","),
+      );
     }
 
     response.data.items.push({
@@ -196,12 +240,14 @@ export async function upsertGroceryList(
       .values({
         id: upsertGroceryList.id ?? undefined,
         title: upsertGroceryList.title,
+        budget: upsertGroceryList.budget,
         createdByUserId: userId,
       })
       .onConflictDoUpdate({
         target: groceryLists.id,
         set: {
           title: upsertGroceryList.title,
+          budget: upsertGroceryList.budget,
         },
       })
       .returning({
@@ -275,6 +321,7 @@ export async function getGroceryListsByUserId(
       acc[row.grocery_lists.id] = {
         id: row.grocery_lists.id,
         title: row.grocery_lists.title,
+        budget: row.grocery_lists.budget,
         items: [],
         createdByUserId: row.grocery_lists.createdByUserId,
         createdAt: row.grocery_lists.createdAt,
@@ -339,6 +386,7 @@ export async function getGroceryListById(
       acc[row.grocery_lists.id] = {
         id: row.grocery_lists.id,
         title: row.grocery_lists.title,
+        budget: row.grocery_lists.budget,
         items: [],
         createdByUserId: row.grocery_lists.createdByUserId,
         createdAt: row.grocery_lists.createdAt,

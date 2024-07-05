@@ -1,4 +1,4 @@
-import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { text, integer, sqliteTable, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const userSessions = sqliteTable("user_sessions", {
@@ -33,6 +33,7 @@ export const users = sqliteTable("users", {
 export const groceryLists = sqliteTable("grocery_lists", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title", { length: 256 }).notNull(),
+  budget: real("budget"),
   createdByUserId: text("created_by_user_id", { length: 256 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

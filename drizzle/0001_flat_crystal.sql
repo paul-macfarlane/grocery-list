@@ -1,0 +1,1 @@
+ALTER TABLE `grocery_lists` ADD `budget` real;
