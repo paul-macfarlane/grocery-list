@@ -16,7 +16,7 @@ The purpose of this app is to make shopping for me and my girlfriend easier. The
   - [ ] items can be grouped
   - [ ] users can add "shopping buddies" to send/share shopping lists
   - [ ] lists can be recurring, they can also be copied/duplicated to a new list
-  - [ ] lists cam have budgets
+  - [x] lists can have budgets
 - [ ] executing a shopping list
   - [ ] a user can enter an interactive ui execute the list
   - [ ] mark items as complete

@@ -7,6 +7,7 @@
   const groceryList: GroceryListFormData = {
     id: data.groceryList.id,
     title: data.groceryList.title,
+    budget: data.groceryList.budget,
     items: data.groceryList.items.map((i) => ({
       ...i,
       listKey: crypto.randomUUID(),

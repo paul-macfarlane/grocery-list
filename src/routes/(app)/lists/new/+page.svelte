@@ -4,7 +4,8 @@
 
   const groceryList: GroceryListFormData = {
     id: null,
-    title: "Test",
+    title: "",
+    budget: null,
     items: [
       {
         listKey: crypto.randomUUID(),
