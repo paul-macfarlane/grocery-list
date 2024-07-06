@@ -13,7 +13,7 @@ The purpose of this app is to make shopping for me and my girlfriend easier. The
   - [ ] items can have substitutes when the item is not available (recursive, a can have substitutes with the same or different priorities)
   - [ ] users can send lists to other users
   - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design
-  - [ ] items can be grouped
+  - [x] items can be grouped
   - [ ] users can add "shopping buddies" to send/share shopping lists
   - [ ] lists can be recurring, they can also be copied/duplicated to a new list
   - [x] lists can have budgets

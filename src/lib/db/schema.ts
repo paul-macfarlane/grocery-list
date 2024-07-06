@@ -51,10 +51,32 @@ export const groceryListItems = sqliteTable("grocery_list_items", {
   groceryListId: integer("grocery_list_id")
     .notNull()
     .references(() => groceryLists.id, { onDelete: "cascade" }),
+  groceryListGroupId: integer("grocery_list_group_id").references(
+    () => groceryListGroups.id,
+    { onDelete: "set null" },
+  ),
   name: text("name", { length: 256 }).notNull(),
   quantity: integer("quantity"),
   notes: text("notes"),
   link: text("link"),
+  createdByUserId: text("created_by_user_id", { length: 256 })
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`)
+    .$onUpdate(() => new Date()),
+});
+
+export const groceryListGroups = sqliteTable("grocery_list_groups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  groceryListId: integer("grocery_list_id")
+    .notNull()
+    .references(() => groceryLists.id, { onDelete: "cascade" }),
+  name: text("name", { length: 256 }).notNull(),
   createdByUserId: text("created_by_user_id", { length: 256 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

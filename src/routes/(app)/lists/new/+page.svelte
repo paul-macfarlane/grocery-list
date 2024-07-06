@@ -6,16 +6,7 @@
     id: null,
     title: "",
     budget: null,
-    items: [
-      {
-        listKey: crypto.randomUUID(),
-        id: null,
-        name: "",
-        quantity: null,
-        notes: null,
-        link: null,
-      },
-    ],
+    items: [],
   };
 </script>
 

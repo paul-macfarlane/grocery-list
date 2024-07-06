@@ -4,7 +4,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
 import {
   deleteGroceryList,
-  getGroceryListById,
+  getGroceryListByIdAndCreator,
 } from "$lib/services/groceryList";
 import type { PageServerLoad } from "./$types";
 
@@ -21,7 +21,10 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
     throw fail(400, { error });
   }
 
-  const groceryList = await getGroceryListById(user.id, groceryListId);
+  const groceryList = await getGroceryListByIdAndCreator(
+    user.id,
+    groceryListId,
+  );
 
   return {
     groceryList,

@@ -1,9 +1,81 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "565a2850-1088-4acc-99ea-9d2bc288a8d1",
+  "id": "a16ee684-7291-4277-91c6-74392270de3b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "grocery_list_groups": {
+      "name": "grocery_list_groups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "grocery_list_id": {
+          "name": "grocery_list_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "grocery_list_groups_grocery_list_id_grocery_lists_id_fk": {
+          "name": "grocery_list_groups_grocery_list_id_grocery_lists_id_fk",
+          "tableFrom": "grocery_list_groups",
+          "tableTo": "grocery_lists",
+          "columnsFrom": ["grocery_list_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "grocery_list_groups_created_by_user_id_users_id_fk": {
+          "name": "grocery_list_groups_created_by_user_id_users_id_fk",
+          "tableFrom": "grocery_list_groups",
+          "tableTo": "users",
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "grocery_list_items": {
       "name": "grocery_list_items",
       "columns": {
@@ -19,6 +91,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "grocery_list_group_id": {
+          "name": "grocery_list_group_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "name": {
@@ -84,6 +163,15 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
+        "grocery_list_items_grocery_list_group_id_grocery_list_groups_id_fk": {
+          "name": "grocery_list_items_grocery_list_group_id_grocery_list_groups_id_fk",
+          "tableFrom": "grocery_list_items",
+          "tableTo": "grocery_list_groups",
+          "columnsFrom": ["grocery_list_group_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "grocery_list_items_created_by_user_id_users_id_fk": {
           "name": "grocery_list_items_created_by_user_id_users_id_fk",
           "tableFrom": "grocery_list_items",
@@ -112,6 +200,13 @@
           "type": "text(256)",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "budget": {
+          "name": "budget",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "created_by_user_id": {
