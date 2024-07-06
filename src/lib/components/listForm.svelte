@@ -279,6 +279,9 @@
               value={item.groupName}
               placeholder="group"
               oninput={(e) => onGroupChange(e, i)}
+              onblur={() => {
+                groupUserIsTyping = "";
+              }}
             />
 
             <datalist id={`groupList${i}`}>
