@@ -11,6 +11,7 @@
     items: data.groceryList.items.map((i) => ({
       ...i,
       listKey: crypto.randomUUID(),
+      groupName: i.group?.name ?? null,
     })),
   };
 </script>

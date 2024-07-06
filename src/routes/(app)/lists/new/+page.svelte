@@ -14,6 +14,7 @@
         quantity: null,
         notes: null,
         link: null,
+        groupName: null,
       },
     ],
   };

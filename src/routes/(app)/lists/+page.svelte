@@ -20,8 +20,8 @@
   {#each data.groceryLists as groceryList}
     <li class="list-card">
       <div>
-        {groceryList.title} - {groceryList.items.length} item{groceryList.items
-          .length !== 1
+        {groceryList.title} - {groceryList.itemsCount} item{groceryList.itemsCount !==
+        1
           ? `s`
           : ``}
       </div>

@@ -35,7 +35,7 @@
     padding: 6px;
   }
 
-  @media only screen and (min-width: 600px) {
+  @media only screen and (min-width: 640px) {
     a {
       border: 2px solid black;
       border-radius: 6px;

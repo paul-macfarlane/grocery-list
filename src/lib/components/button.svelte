@@ -4,15 +4,18 @@
   type ButtonProps = {
     color: "primary" | "secondary";
     onclick?: MouseEventHandler<HTMLButtonElement>;
-    classNames?: string;
-    children: unknown;
+    buttonClass?: string;
+    // eslint-disable-next-line
+    children: any;
     type?: "button" | "submit" | "reset";
   };
-  const { color, onclick, classNames, children, type }: ButtonProps = $props();
+  const { color, onclick, buttonClass, children, type }: ButtonProps = $props();
 </script>
 
-<button {onclick} type={type ?? "button"} class={`color-${color} ${classNames}`}
-  >{@render children()}</button
+<button
+  {onclick}
+  type={type ?? "button"}
+  class={`color-${color} ${buttonClass}`}>{@render children()}</button
 >
 
 <style>

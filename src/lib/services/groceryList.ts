@@ -1,8 +1,17 @@
 import { z } from "zod";
 import { db } from "$lib/db";
-import { groceryLists, groceryListItems } from "$lib/db/schema";
-import type { GroceryList, UpsertGroceryList } from "$lib/types/groceryList";
-import { and, eq, notInArray, sql } from "drizzle-orm";
+import {
+  groceryLists,
+  groceryListItems,
+  groceryListGroups,
+} from "$lib/db/schema";
+import type {
+  GroceryList,
+  GroceryListItemGroup,
+  GroceryListMinified,
+  UpsertGroceryList,
+} from "$lib/types/groceryList";
+import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
 
 type ParseShoppingListFromFormRes = {
@@ -218,12 +227,34 @@ export function parseGroceryListFromFormData(
       );
     }
 
+    const groupNameCheck = z
+      .string({ message: "must be set" })
+      .max(256, "cannot be more than 256 characters")
+      .transform((val) => {
+        if (val === "") {
+          return null;
+        }
+
+        return val;
+      })
+      .safeParse(formData.get(`groupName${i}`));
+    let groupName: string | null = null;
+    if (groupNameCheck.success) {
+      groupName = groupNameCheck.data;
+    } else {
+      response.errorMap.set(
+        `groupName${i}`,
+        groupNameCheck.error.errors.map((err) => err.message).join(","),
+      );
+    }
+
     response.data.items.push({
       id: itemId,
       name,
       quantity,
       notes,
       link,
+      groupName,
     });
   }
 
@@ -258,6 +289,72 @@ export async function upsertGroceryList(
         updatedAt: groceryLists.updatedAt,
       });
 
+    const uniqueGroupNames = new Set<string>();
+    const upsertGroupNames = upsertGroceryList.items
+      .filter(({ groupName }) => {
+        if (!groupName || uniqueGroupNames.has(groupName)) {
+          return false;
+        }
+
+        uniqueGroupNames.add(groupName);
+
+        return true;
+      })
+      .map((item) => item.groupName!);
+    if (upsertGroceryList.id && upsertGroupNames.length) {
+      await tx
+        .delete(groceryListGroups)
+        .where(
+          and(
+            eq(groceryListGroups.groceryListId, upsertGroceryList.id),
+            notInArray(groceryListGroups.name, upsertGroupNames),
+          ),
+        );
+    }
+    if (upsertGroceryList.id && !upsertGroupNames.length) {
+      await tx
+        .delete(groceryListGroups)
+        .where(eq(groceryListGroups.groceryListId, upsertGroceryList.id));
+    }
+
+    const groupNameToIdMap = new Map<string, number>();
+    if (upsertGroupNames.length) {
+      const existingGroups = await tx
+        .select()
+        .from(groceryListGroups)
+        .where(
+          and(
+            eq(groceryListGroups.groceryListId, groceryListRes[0].id),
+            inArray(groceryListGroups.name, upsertGroupNames),
+          ),
+        );
+      existingGroups.forEach(({ name, id }) => {
+        groupNameToIdMap.set(name, id);
+      });
+
+      const newGroupNames = upsertGroupNames.filter(
+        (name) => !groupNameToIdMap.has(name),
+      );
+      if (newGroupNames.length) {
+        const res = await tx
+          .insert(groceryListGroups)
+          .values(
+            newGroupNames.map((name) => ({
+              groceryListId: groceryListRes[0].id,
+              name,
+              createdByUserId: userId,
+            })),
+          )
+          .returning({
+            id: groceryListGroups.id,
+            name: groceryListGroups.name,
+          });
+        res.forEach((group) => {
+          groupNameToIdMap.set(group.name, group.id);
+        });
+      }
+    }
+
     const existingItemIds = upsertGroceryList.items
       .filter((i) => i.id)
       .map((i) => i.id!);
@@ -284,6 +381,9 @@ export async function upsertGroceryList(
           upsertGroceryList.items.map((item) => ({
             id: item.id ?? undefined,
             groceryListId: groceryListRes[0].id,
+            groceryListGroupId: item.groupName
+              ? groupNameToIdMap.get(item.groupName) ?? null
+              : null,
             name: item.name,
             quantity: item.quantity,
             notes: item.notes,
@@ -298,55 +398,32 @@ export async function upsertGroceryList(
             quantity: sql.raw(`excluded.${groceryListItems.quantity.name}`),
             notes: sql.raw(`excluded.${groceryListItems.notes.name}`),
             link: sql.raw(`excluded.${groceryListItems.link.name}`),
+            groceryListGroupId: sql.raw(
+              `excluded.${groceryListItems.groceryListGroupId.name}`,
+            ),
           },
         });
     }
   });
 }
 
-export async function getGroceryListsByUserId(
-  userId: string,
-): Promise<GroceryList[]> {
-  const rows = await db
-    .select()
+export async function getMinifiedGroceryListsByCreator(
+  creatorId: string,
+): Promise<GroceryListMinified[]> {
+  return db
+    .select({
+      id: groceryLists.id,
+      title: groceryLists.title,
+      updatedAt: groceryLists.updatedAt,
+      itemsCount: count(groceryListItems.id),
+    })
     .from(groceryLists)
     .leftJoin(
       groceryListItems,
       eq(groceryLists.id, groceryListItems.groceryListId),
     )
-    .where(eq(groceryLists.createdByUserId, userId));
-
-  const records = rows.reduce<Record<number, GroceryList>>((acc, row) => {
-    if (!acc[row.grocery_lists.id]) {
-      acc[row.grocery_lists.id] = {
-        id: row.grocery_lists.id,
-        title: row.grocery_lists.title,
-        budget: row.grocery_lists.budget,
-        items: [],
-        createdByUserId: row.grocery_lists.createdByUserId,
-        createdAt: row.grocery_lists.createdAt,
-        updatedAt: row.grocery_lists.updatedAt,
-      };
-    }
-
-    if (row.grocery_list_items) {
-      acc[row.grocery_lists.id].items.push({
-        id: row.grocery_list_items.id,
-        groceryListId: row.grocery_list_items.groceryListId,
-        name: row.grocery_list_items.name,
-        quantity: row.grocery_list_items.quantity,
-        notes: row.grocery_list_items.notes,
-        link: row.grocery_list_items.link,
-        createdByUserId: row.grocery_list_items.createdByUserId,
-        createdAt: row.grocery_list_items.createdAt,
-        updatedAt: row.grocery_list_items.updatedAt,
-      });
-    }
-
-    return acc;
-  }, {});
-
-  return Object.values(records);
+    .where(eq(groceryLists.createdByUserId, creatorId))
+    .groupBy(groceryLists.id);
 }
 
 export async function deleteGroceryList(
@@ -363,7 +440,7 @@ export async function deleteGroceryList(
     );
 }
 
-export async function getGroceryListById(
+export async function getGroceryListByIdAndCreator(
   userId: string,
   groceryListId: number,
 ): Promise<GroceryList> {
@@ -373,6 +450,10 @@ export async function getGroceryListById(
     .leftJoin(
       groceryListItems,
       eq(groceryLists.id, groceryListItems.groceryListId),
+    )
+    .leftJoin(
+      groceryListGroups,
+      eq(groceryLists.id, groceryListGroups.groceryListId),
     )
     .where(
       and(
@@ -395,17 +476,35 @@ export async function getGroceryListById(
     }
 
     if (row.grocery_list_items) {
-      acc[row.grocery_lists.id].items.push({
-        id: row.grocery_list_items.id,
-        groceryListId: row.grocery_list_items.groceryListId,
-        name: row.grocery_list_items.name,
-        quantity: row.grocery_list_items.quantity,
-        notes: row.grocery_list_items.notes,
-        link: row.grocery_list_items.link,
-        createdByUserId: row.grocery_list_items.createdByUserId,
-        createdAt: row.grocery_list_items.createdAt,
-        updatedAt: row.grocery_list_items.updatedAt,
-      });
+      let group: GroceryListItemGroup | null = null;
+      if (
+        row.grocery_list_groups &&
+        row.grocery_list_items.groceryListGroupId === row.grocery_list_groups.id
+      ) {
+        group = row.grocery_list_groups;
+      }
+
+      const existingItemIndex = acc[row.grocery_lists.id].items.findIndex(
+        (item) => item.id === row.grocery_list_items!.id,
+      );
+      if (existingItemIndex > -1 && group) {
+        acc[row.grocery_lists.id].items[existingItemIndex].group = group;
+      }
+
+      if (existingItemIndex === -1) {
+        acc[row.grocery_lists.id].items.push({
+          id: row.grocery_list_items.id,
+          groceryListId: row.grocery_list_items.groceryListId,
+          name: row.grocery_list_items.name,
+          quantity: row.grocery_list_items.quantity,
+          notes: row.grocery_list_items.notes,
+          link: row.grocery_list_items.link,
+          group,
+          createdByUserId: row.grocery_list_items.createdByUserId,
+          createdAt: row.grocery_list_items.createdAt,
+          updatedAt: row.grocery_list_items.updatedAt,
+        });
+      }
     }
 
     return acc;
