@@ -14,7 +14,7 @@ import type {
 import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
 
-type ParseShoppingListFromFormRes = {
+type ParseGroceryListFromFormRes = {
   data: UpsertGroceryList;
   errorMap: Map<string, string>;
 };
@@ -24,8 +24,8 @@ type ParseShoppingListFromFormRes = {
 // todo this could use some unit tests
 export function parseGroceryListFromFormData(
   formData: FormData,
-): ParseShoppingListFromFormRes {
-  const response: ParseShoppingListFromFormRes = {
+): ParseGroceryListFromFormRes {
+  const response: ParseGroceryListFromFormRes = {
     data: {
       id: null,
       title: "",

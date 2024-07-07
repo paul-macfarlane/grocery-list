@@ -1,30 +1,40 @@
 # grocery-list
 
-## Summary and Feature List
+## Summary
 
-The purpose of this app is to make shopping for me and my girlfriend easier. The list of expected features are
+The purpose of this app is to make grocery for me and my girlfriend easier. The list of expected features are
+
+## Feature List
 
 - [x] authentication
   - [x] users can log in with social accounts
     - [x] add protected routes, add sign out, get session info in request
     - [x] add cleaner styling for login and root page
-- [ ] creating/editing a shopping list
+- [ ] profile management (needed for sharing functionality)
+  - [ ] users start of with automatically generated usernames
+  - [ ] users can edit their usernames
+- [x] creating/editing a grocery list
   - [x] items can be created, edited, and deleted and include name, quantity, notes, and link. Only name is required
-  - [ ] items can have substitutes when the item is not available (recursive, a can have substitutes with the same or different priorities)
-  - [ ] users can send lists to other users
-  - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design
-  - [x] items can be grouped
-  - [ ] users can add "shopping buddies" to send/share shopping lists
-  - [ ] lists can be recurring, they can also be copied/duplicated to a new list
   - [x] lists can have budgets
-- [ ] executing a shopping list
+- [ ] advanced grocery lists
+  - [x] items can be grouped
+  - [ ] items can have substitutes when the item is not available
+  - [ ] lists can be recurring
+  - [ ] they can also be copied/duplicated to a new list
+- [ ] executing a grocery list
   - [ ] a user can enter an interactive ui execute the list
   - [ ] mark items as complete
   - [ ] skip items
   - [ ] replace items
   - [ ] user can still edit/add to the list during execution
-- [ ] non-feature related work
+- [ ] sharing grocery lists
+  - [ ] users can send lists to other users
+  - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design
+  - [ ] users can add "grocery buddies" to send/share grocery lists
+- [ ] non-functional related work
   - [x] migrate from PostgreSQL to Turso for cheaper db hosting in the future
+  - [ ] dark mode
+  - [ ] automated testing
   - [ ] host the application on the web
 
 ## Local Setup
