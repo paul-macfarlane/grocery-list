@@ -47,6 +47,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     const userSession = await createUserSession({
       id: googleUser.id,
       authProvider: "google",
+      username: "", // a replacement will be generated
       email: googleUser.email,
       firstName: googleUser.given_name,
       lastName: googleUser.family_name,
