@@ -1,4 +1,4 @@
-import { getUserForSession } from "$lib/services/userSessions";
+import { getUserForSession } from "$lib/services/users";
 import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types";
 

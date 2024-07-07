@@ -5,7 +5,7 @@ import {
   GOOGLE_REDIRECT_UI,
 } from "$env/static/private";
 import axios from "axios";
-import { createUserSession } from "$lib/services/userSessions";
+import { createUserSession } from "$lib/services/users";
 import type { GoogleUser } from "../../types";
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
@@ -47,6 +47,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     const userSession = await createUserSession({
       id: googleUser.id,
       authProvider: "google",
+      username: "", // a replacement will be generated
       email: googleUser.email,
       firstName: googleUser.given_name,
       lastName: googleUser.family_name,

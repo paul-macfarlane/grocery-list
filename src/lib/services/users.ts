@@ -3,23 +3,87 @@ import { db } from "$lib/db";
 import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import type { Cookies } from "@sveltejs/kit";
+import type { UserInfo, UserSession } from "$lib/types/users";
 
-export type UserInfo = {
-  id: string;
-  authProvider: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  profilePicUrl: string;
-};
+const adjectives = [
+  "Brave",
+  "Sunny",
+  "Happy",
+  "Eager",
+  "Calm",
+  "Bright",
+  "Jolly",
+  "Wise",
+  "Clever",
+  "Gentle",
+  "Noble",
+  "Swift",
+  "Bold",
+  "Shy",
+  "Mighty",
+  "Quick",
+  "Fierce",
+  "Vivid",
+  "Proud",
+  "Gentle",
+];
+const nouns = [
+  "Tiger",
+  "Sky",
+  "River",
+  "Mountain",
+  "Lion",
+  "Falcon",
+  "Wolf",
+  "Eagle",
+  "Bear",
+  "Hawk",
+  "Panther",
+  "Dolphin",
+  "Fox",
+  "Otter",
+  "Deer",
+  "Rabbit",
+  "Turtle",
+  "Cheetah",
+  "Buffalo",
+  "Leopard",
+];
 
-export type UserSession = {
-  id: string;
-  userId: string;
-  csrfToken: string;
-  authProvider: string;
-  expiresAt: Date;
-};
+function getRandomElement<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateUsername(): string {
+  const adjective = getRandomElement(adjectives);
+  const noun = getRandomElement(nouns);
+  const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+  return `${adjective}${noun}${suffix}`;
+}
+
+async function isUsernameTaken(username: string): Promise<boolean> {
+  return !!(
+    await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, username))
+  ).length;
+}
+
+async function generateUniqueUsername(): Promise<string> {
+  let username = "";
+  let isUnique = false;
+  let attempts = 0;
+  const maxAttempts = 30;
+
+  while (!isUnique && attempts < maxAttempts) {
+    username = generateUsername();
+    isUnique = !(await isUsernameTaken(username));
+    attempts++;
+  }
+
+  return username;
+}
 
 export async function createUserSession(user: UserInfo): Promise<UserSession> {
   const sessionId = randomBytes(16).toString("hex");
@@ -33,6 +97,7 @@ export async function createUserSession(user: UserInfo): Promise<UserSession> {
         id: user.id,
         authProvider: user.authProvider,
         email: user.email,
+        username: await generateUniqueUsername(),
         firstName: user.firstName,
         lastName: user.lastName,
         profilePicUrl: user.profilePicUrl,

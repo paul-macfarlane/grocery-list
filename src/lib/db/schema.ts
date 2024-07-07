@@ -17,6 +17,7 @@ export const userSessions = sqliteTable("user_sessions", {
 export const users = sqliteTable("users", {
   id: text("id", { length: 256 }).primaryKey().notNull(),
   authProvider: text("auth_provider", { length: 64 }).notNull(),
+  username: text("username", { length: 20 }).notNull().unique(),
   email: text("email", { length: 256 }).notNull(),
   firstName: text("first_name", { length: 256 }).notNull(),
   lastName: text("last_name", { length: 256 }).notNull(),

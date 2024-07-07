@@ -4,7 +4,7 @@ import {
   upsertGroceryList,
   parseGroceryListFromFormData,
 } from "$lib/services/groceryList";
-import { getUserForSession } from "$lib/services/userSessions";
+import { getUserForSession } from "$lib/services/users";
 
 export const actions = {
   default: async (event) => {

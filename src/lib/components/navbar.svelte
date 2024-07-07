@@ -1,6 +1,6 @@
 <script lang="ts">
   import userProfileSvg from "$lib/assets/user-profile.svg";
-  import type { UserInfo } from "$lib/services/userSessions";
+  import type { UserInfo } from "$lib/types/users";
   import LinkButton from "$lib/components/linkButton.svelte";
 
   type NavLink = {
