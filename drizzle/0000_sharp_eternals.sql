@@ -48,6 +48,7 @@ CREATE TABLE `user_sessions` (
 CREATE TABLE `users` (
 	`id` text(256) PRIMARY KEY NOT NULL,
 	`auth_provider` text(64) NOT NULL,
+	`username` text(20) NOT NULL,
 	`email` text(256) NOT NULL,
 	`first_name` text(256) NOT NULL,
 	`last_name` text(256) NOT NULL,
@@ -55,3 +56,5 @@ CREATE TABLE `users` (
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
+--> statement-breakpoint
+CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);

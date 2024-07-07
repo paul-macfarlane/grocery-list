@@ -5,7 +5,7 @@ import {
   GOOGLE_REDIRECT_UI,
 } from "$env/static/private";
 import axios from "axios";
-import { createUserSession } from "$lib/services/userSessions";
+import { createUserSession } from "$lib/services/users";
 import type { GoogleUser } from "../../types";
 
 export const GET: RequestHandler = async ({ url, cookies }) => {

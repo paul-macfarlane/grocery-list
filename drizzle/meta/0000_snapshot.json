@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a16ee684-7291-4277-91c6-74392270de3b",
+  "id": "715864e8-d8d3-4289-80d3-134e1c46243e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "grocery_list_groups": {
@@ -327,6 +327,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "username": {
+          "name": "username",
+          "type": "text(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "email": {
           "name": "email",
           "type": "text(256)",
@@ -372,7 +379,13 @@
           "default": "(unixepoch())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_username_unique": {
+          "name": "users_username_unique",
+          "columns": ["username"],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}

@@ -10,8 +10,8 @@ The purpose of this app is to make grocery for me and my girlfriend easier. The 
   - [x] users can log in with social accounts
     - [x] add protected routes, add sign out, get session info in request
     - [x] add cleaner styling for login and root page
-- [ ] profile management (needed for sharing functionality)
-  - [ ] users start of with automatically generated usernames
+- [ ] profile management
+  - [x] users start of with automatically generated usernames (needed for sharing functionality so that everyone has a username)
   - [ ] users can edit their usernames
 - [x] creating/editing a grocery list
   - [x] items can be created, edited, and deleted and include name, quantity, notes, and link. Only name is required

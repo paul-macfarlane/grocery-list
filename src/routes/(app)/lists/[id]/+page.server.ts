@@ -1,5 +1,5 @@
 import type { Actions } from "./$types";
-import { getUserForSession } from "$lib/services/userSessions";
+import { getUserForSession } from "$lib/services/users";
 import { fail, redirect } from "@sveltejs/kit";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
 import {
