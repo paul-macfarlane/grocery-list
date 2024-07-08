@@ -1,9 +1,15 @@
 import { users, userSessions } from "$lib/db/schema";
 import { db } from "$lib/db";
 import { randomBytes } from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { Cookies } from "@sveltejs/kit";
-import type { UserInfo, UserSession } from "$lib/types/users";
+import {
+  UpdateUserError,
+  type UpdateUserInfo,
+  type UserInfo,
+  type UserSession,
+} from "$lib/types/users";
+import { z } from "zod";
 
 const adjectives = [
   "Brave",
@@ -194,4 +200,64 @@ export async function getUserForSession(
   }
 
   return userRes[0];
+}
+
+type ParseUpdateUserFromFormDataRes = {
+  data: UpdateUserInfo;
+  errorMap: Map<string, string>;
+};
+
+export function parseUpdateUserFromFormData(
+  formData: FormData,
+): ParseUpdateUserFromFormDataRes {
+  let username = "";
+  const errorMap = new Map<string, string>();
+  const usernameCheck = z
+    .string()
+    .min(8, "must be at least 8 characters long")
+    .max(20, "must be 20 characters or less")
+    .safeParse(formData.get("username")?.toString().trim());
+  if (usernameCheck.success) {
+    username = usernameCheck.data;
+  } else {
+    errorMap.set(
+      `username`,
+      usernameCheck.error.errors.map((err) => err.message).join(","),
+    );
+  }
+
+  return {
+    data: {
+      username,
+    },
+    errorMap,
+  };
+}
+
+export async function updateUser(
+  userId: string,
+  updateUser: UpdateUserInfo,
+): Promise<void> {
+  const userWithIdRes = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!userWithIdRes.length) {
+    throw new UpdateUserError("user does not exists", 404);
+  }
+
+  const userWithUserNameRes = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.username, updateUser.username), ne(users.id, userId)));
+  if (userWithUserNameRes.length) {
+    throw new UpdateUserError("username already taken", 409);
+  }
+
+  await db
+    .update(users)
+    .set({
+      username: updateUser.username,
+    })
+    .where(eq(users.id, userId));
 }

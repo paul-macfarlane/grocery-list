@@ -36,7 +36,7 @@ export function parseGroceryListFromFormData(
   };
 
   const countCheck = validateAndTransformStrToNum.safeParse(
-    formData.get("count"),
+    formData.get("count")?.toString().trim(),
   );
   if (!countCheck.success) {
     throw new Error(
@@ -61,7 +61,7 @@ export function parseGroceryListFromFormData(
 
       return parseInt(val, 10);
     })
-    .safeParse(formData.get(`id`));
+    .safeParse(formData.get(`id`)?.toString().trim());
   if (idCheck.success) {
     response.data.id = idCheck.data;
   } else {
@@ -76,7 +76,7 @@ export function parseGroceryListFromFormData(
     .string({ message: "must exist as an input" })
     .min(1, "is required")
     .max(256, "cannot be more than 256 characters")
-    .safeParse(formData.get("title"));
+    .safeParse(formData.get("title")?.toString().trim());
   if (titleCheck.success) {
     response.data.title = titleCheck.data;
   } else {
@@ -101,7 +101,7 @@ export function parseGroceryListFromFormData(
 
       return parseFloat(val);
     })
-    .safeParse(formData.get("budget"));
+    .safeParse(formData.get("budget")?.toString().trim());
   if (budgetCheck.success) {
     response.data.budget = budgetCheck.data;
   } else {
@@ -129,7 +129,7 @@ export function parseGroceryListFromFormData(
 
         return parseInt(val, 10);
       })
-      .safeParse(formData.get(`itemId${i}`));
+      .safeParse(formData.get(`itemId${i}`)?.toString().trim());
     let itemId: number | null = null;
     if (itemIdCheck.success) {
       itemId = itemIdCheck.data;
@@ -144,7 +144,7 @@ export function parseGroceryListFromFormData(
       .string({ message: "must exist as an input" })
       .min(1, "is required")
       .max(256, "cannot be more than 256 characters")
-      .safeParse(formData.get(`name${i}`));
+      .safeParse(formData.get(`name${i}`)?.toString().trim());
     let name = "";
     if (nameCheck.success) {
       name = nameCheck.data;
@@ -174,7 +174,7 @@ export function parseGroceryListFromFormData(
 
         return parseInt(val, 10);
       })
-      .safeParse(formData.get(`quantity${i}`));
+      .safeParse(formData.get(`quantity${i}`)?.toString().trim());
     let quantity: number | null = null;
     if (quantityCheck.success) {
       quantity = quantityCheck.data;
@@ -195,7 +195,7 @@ export function parseGroceryListFromFormData(
 
         return val;
       })
-      .safeParse(formData.get(`notes${i}`));
+      .safeParse(formData.get(`notes${i}`)?.toString().trim());
     let notes: string | null = null;
     if (notesCheck.success) {
       notes = notesCheck.data;
@@ -216,7 +216,7 @@ export function parseGroceryListFromFormData(
 
         return val;
       })
-      .safeParse(formData.get(`link${i}`));
+      .safeParse(formData.get(`link${i}`)?.toString().trim());
     let link: string | null = null;
     if (linkCheck.success) {
       link = linkCheck.data;
@@ -237,7 +237,7 @@ export function parseGroceryListFromFormData(
 
         return val;
       })
-      .safeParse(formData.get(`groupName${i}`));
+      .safeParse(formData.get(`groupName${i}`)?.toString().trim());
     let groupName: string | null = null;
     if (groupNameCheck.success) {
       groupName = groupNameCheck.data;
