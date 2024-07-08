@@ -1,5 +1,6 @@
 <script lang="ts">
   import logoutSvg from "$lib/assets/logout.svg";
+  import userProfileSvg from "$lib/assets/user-profile.svg";
   import Navbar from "$lib/components/navbar.svelte";
 
   let { data, children } = $props();
@@ -20,6 +21,11 @@
   ];
 
   const profileMenuLinks = [
+    {
+      href: "/profile",
+      name: "Profile",
+      icon: userProfileSvg,
+    },
     {
       href: "/auth/logout",
       name: "Logout",

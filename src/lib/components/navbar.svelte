@@ -118,7 +118,7 @@
 
   .profile-menu-group {
     position: absolute;
-    margin-left: -48px;
+    margin-left: -52px;
     margin-top: -4px;
     background: white;
     border: 1px solid black;
@@ -129,9 +129,8 @@
   }
 
   .profile-menu-link {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: grid;
+    grid-template-columns: [first] auto [second] auto;
     gap: 8px;
     padding: 8px;
     border-radius: 8px;

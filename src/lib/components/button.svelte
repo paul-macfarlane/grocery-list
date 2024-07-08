@@ -8,15 +8,19 @@
     // eslint-disable-next-line
     children: any;
     type?: "button" | "submit" | "reset";
+    disabled?: boolean;
   };
-  const { color, onclick, buttonClass, children, type }: ButtonProps = $props();
+  const { color, onclick, buttonClass, children, type, disabled }: ButtonProps =
+    $props();
 </script>
 
 <button
   {onclick}
   type={type ?? "button"}
-  class={`color-${color} ${buttonClass}`}>{@render children()}</button
->
+  {disabled}
+  class={`color-${color} ${buttonClass}`}
+  >{@render children()}
+</button>
 
 <style>
   button {
@@ -30,6 +34,10 @@
     border: 3px solid black;
     padding: 9px;
     outline: none;
+  }
+
+  button:disabled {
+    opacity: 0.8;
   }
 
   .color-primary {
