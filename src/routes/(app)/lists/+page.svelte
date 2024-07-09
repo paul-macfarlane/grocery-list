@@ -4,6 +4,7 @@
   import addSvg from "$lib/assets/add.svg";
   import deleteSvg from "$lib/assets/delete.svg";
   import editSvg from "$lib/assets/edit.svg";
+  import duplicateSvg from "$lib/assets/duplicate.svg";
 
   let { data } = $props();
 </script>
@@ -36,6 +37,15 @@
             href={`/lists/${groceryList.id}`}
             src={editSvg}
           />
+
+          <form method="POST" action={`/lists/${groceryList.id}?/duplicate`}>
+            <IconButton
+              imageClass="icon"
+              type="submit"
+              alt="duplicate list"
+              src={duplicateSvg}
+            />
+          </form>
 
           <form method="POST" action={`/lists/${groceryList.id}?/delete`}>
             <IconButton

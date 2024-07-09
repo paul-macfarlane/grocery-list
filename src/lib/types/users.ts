@@ -19,14 +19,3 @@ export type UserSession = {
 export type UpdateUserInfo = {
   username: string;
 };
-
-export class UpdateUserError extends Error {
-  constructor(message: string, code: number) {
-    super(message);
-    this.name = "UpdateUserError";
-    this.code = code;
-    Object.setPrototypeOf(this, UpdateUserError.prototype);
-  }
-
-  code: number;
-}

@@ -7,12 +7,13 @@ import {
 } from "$lib/db/schema";
 import type {
   GroceryList,
-  GroceryListItemGroup,
+  GroceryListGroup,
   GroceryListMinified,
   UpsertGroceryList,
 } from "$lib/types/groceryList";
 import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
+import { ApplicationError, NotFoundError } from "$lib/types/errors";
 
 type ParseGroceryListFromFormRes = {
   data: UpsertGroceryList;
@@ -443,8 +444,8 @@ export async function deleteGroceryList(
 export async function getGroceryListByIdAndCreator(
   userId: string,
   groceryListId: number,
-): Promise<GroceryList> {
-  const rows = await db
+): Promise<GroceryList | null> {
+  const listRows = await db
     .select()
     .from(groceryLists)
     .leftJoin(
@@ -461,54 +462,126 @@ export async function getGroceryListByIdAndCreator(
         eq(groceryLists.id, groceryListId),
       ),
     );
+  if (!listRows.length) {
+    return null;
+  }
 
-  const records = rows.reduce<Record<number, GroceryList>>((acc, row) => {
-    if (!acc[row.grocery_lists.id]) {
-      acc[row.grocery_lists.id] = {
-        id: row.grocery_lists.id,
-        title: row.grocery_lists.title,
-        budget: row.grocery_lists.budget,
-        items: [],
-        createdByUserId: row.grocery_lists.createdByUserId,
-        createdAt: row.grocery_lists.createdAt,
-        updatedAt: row.grocery_lists.updatedAt,
-      };
+  return Object.values(
+    listRows.reduce<Record<number, GroceryList>>((accList, listRow) => {
+      if (!accList[listRow.grocery_lists.id]) {
+        accList[listRow.grocery_lists.id] = {
+          id: listRow.grocery_lists.id,
+          title: listRow.grocery_lists.title,
+          budget: listRow.grocery_lists.budget,
+          items: [],
+          createdByUserId: listRow.grocery_lists.createdByUserId,
+          createdAt: listRow.grocery_lists.createdAt,
+          updatedAt: listRow.grocery_lists.updatedAt,
+        };
+      }
+
+      if (listRow.grocery_list_items) {
+        let listGroup: GroceryListGroup | null = null;
+        if (
+          listRow.grocery_list_groups &&
+          listRow.grocery_list_groups.id ===
+            listRow.grocery_list_items.groceryListGroupId
+        ) {
+          listGroup = listRow.grocery_list_groups;
+        }
+
+        const existingItemIndex = accList[
+          listRow.grocery_lists.id
+        ].items.findIndex((item) => item.id === listRow.grocery_list_items!.id);
+        if (existingItemIndex > -1 && listGroup) {
+          accList[listRow.grocery_lists.id].items[existingItemIndex].group =
+            listGroup;
+        } else if (existingItemIndex === -1) {
+          accList[listRow.grocery_lists.id].items.push({
+            id: listRow.grocery_list_items.id,
+            groceryListId: listRow.grocery_list_items.groceryListId,
+            name: listRow.grocery_list_items.name,
+            quantity: listRow.grocery_list_items.quantity,
+            notes: listRow.grocery_list_items.notes,
+            link: listRow.grocery_list_items.link,
+            group: listGroup,
+            createdByUserId: listRow.grocery_list_items.createdByUserId,
+            createdAt: listRow.grocery_list_items.createdAt,
+            updatedAt: listRow.grocery_list_items.updatedAt,
+          });
+        }
+      }
+
+      return accList;
+    }, {}),
+  )[0];
+}
+
+export async function duplicateGroceryList(
+  userId: string,
+  groceryListId: number,
+): Promise<void> {
+  const listToDuplicate = await getGroceryListByIdAndCreator(
+    userId,
+    groceryListId,
+  );
+  if (!listToDuplicate) {
+    throw new NotFoundError("grocery list");
+  }
+
+  return db.transaction(async (tx) => {
+    const newListRows = await tx
+      .insert(groceryLists)
+      .values({
+        title: listToDuplicate.title,
+        budget: listToDuplicate.budget,
+        createdByUserId: userId,
+      })
+      .returning({
+        id: groceryLists.id,
+      });
+    if (!newListRows.length) {
+      throw new ApplicationError("unable to create grocery list");
     }
 
-    if (row.grocery_list_items) {
-      let group: GroceryListItemGroup | null = null;
-      if (
-        row.grocery_list_groups &&
-        row.grocery_list_items.groceryListGroupId === row.grocery_list_groups.id
-      ) {
-        group = row.grocery_list_groups;
-      }
+    if (listToDuplicate.items.length) {
+      const newListGroupNameToId = new Map<string, number>();
+      const listGroupsToDuplicate = listToDuplicate.items
+        .filter((item) => item.group)
+        .map((item) => item.group!);
+      if (listGroupsToDuplicate.length) {
+        const newListGroupRows = await tx
+          .insert(groceryListGroups)
+          .values(
+            listGroupsToDuplicate.map((group) => ({
+              groceryListId: newListRows[0].id,
+              name: group.name,
+              createdByUserId: userId,
+            })),
+          )
+          .returning({
+            id: groceryListGroups.id,
+            name: groceryListGroups.name,
+          });
 
-      const existingItemIndex = acc[row.grocery_lists.id].items.findIndex(
-        (item) => item.id === row.grocery_list_items!.id,
-      );
-      if (existingItemIndex > -1 && group) {
-        acc[row.grocery_lists.id].items[existingItemIndex].group = group;
-      }
-
-      if (existingItemIndex === -1) {
-        acc[row.grocery_lists.id].items.push({
-          id: row.grocery_list_items.id,
-          groceryListId: row.grocery_list_items.groceryListId,
-          name: row.grocery_list_items.name,
-          quantity: row.grocery_list_items.quantity,
-          notes: row.grocery_list_items.notes,
-          link: row.grocery_list_items.link,
-          group,
-          createdByUserId: row.grocery_list_items.createdByUserId,
-          createdAt: row.grocery_list_items.createdAt,
-          updatedAt: row.grocery_list_items.updatedAt,
+        newListGroupRows.forEach((row) => {
+          newListGroupNameToId.set(row.name, row.id);
         });
       }
+
+      await tx.insert(groceryListItems).values(
+        listToDuplicate.items.map((item) => ({
+          groceryListId: newListRows[0].id,
+          groceryListGroupId: item.group
+            ? newListGroupNameToId.get(item.group.name)
+            : undefined,
+          name: item.name,
+          quantity: item.quantity,
+          notes: item.notes,
+          link: item.link,
+          createdByUserId: userId,
+        })),
+      );
     }
-
-    return acc;
-  }, {});
-
-  return Object.values(records)[0];
+  });
 }

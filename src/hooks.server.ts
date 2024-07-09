@@ -9,13 +9,11 @@ export const handle: Handle = async ({ event, resolve }) => {
     event.url.pathname === "/auth/logout";
 
   if (!authedRoute && userSession) {
-    console.log("redirecting user already authed");
-    throw redirect(302, "/");
+    redirect(302, "/");
   }
 
   if (authedRoute && !userSession) {
-    console.log("redirecting user not authed");
-    throw redirect(302, "/auth");
+    redirect(302, "/auth");
   }
 
   return resolve(event);

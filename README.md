@@ -18,15 +18,15 @@ The purpose of this app is to make grocery for me and my girlfriend easier. The 
   - [x] lists can have budgets
 - [ ] advanced grocery lists
   - [x] items can be grouped
+  - [x] they can also be copied/duplicated to a new list
   - [ ] items can have substitutes when the item is not available
-  - [ ] lists can be recurring
-  - [ ] they can also be copied/duplicated to a new list
 - [ ] executing a grocery list
   - [ ] a user can enter an interactive ui execute the list
   - [ ] mark items as complete
   - [ ] skip items
   - [ ] replace items
   - [ ] user can still edit/add to the list during execution
+  - [ ] lists can be recurring
 - [ ] sharing grocery lists
   - [ ] users can send lists to other users
   - [ ] lists can be collaborative, meaning that users can edit other users lists. this will probably need some thought in design

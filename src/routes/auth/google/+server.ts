@@ -15,5 +15,5 @@ export const GET: RequestHandler = ({ cookies }) => {
     "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${GOOGLE_REDIRECT_UI}&scope=${scope}&state=${state}&access_type=offline`;
 
-  throw redirect(302, authUrl);
+  redirect(302, authUrl);
 };

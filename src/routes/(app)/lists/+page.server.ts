@@ -1,13 +1,9 @@
 import type { PageServerLoad } from "./$types";
-import { getUserForSession } from "$lib/services/users";
-import { redirect } from "@sveltejs/kit";
+import { getUserForSessionOrRedirect } from "$lib/services/users";
 import { getMinifiedGroceryListsByCreator } from "$lib/services/groceryList";
 
 export const load: PageServerLoad = async ({ cookies }) => {
-  const user = await getUserForSession(cookies);
-  if (!user) {
-    throw redirect(302, "/auth");
-  }
+  const user = await getUserForSessionOrRedirect(cookies);
 
   const groceryLists = await getMinifiedGroceryListsByCreator(user.id);
 

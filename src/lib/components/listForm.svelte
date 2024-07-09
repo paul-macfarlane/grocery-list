@@ -35,8 +35,8 @@
   });
   let form: HTMLFormElement; // todo can use this to programmatically submit via form.requestSubmit() when debouncing
   // todo it is kinda annoying how hitting enter submits (even though that is technically how forms are supposed to work)
-  // user might not expect that, think about how ot prevent this form-wide but also allow save button to work
-  // easiest way to fix this is just trigger an api call when the save button is hit,
+  // user might not expect that, think about how ot prevent this form-wide but also allow upsert button to work
+  // easiest way to fix this is just trigger an api call when the upsert button is hit,
   // only downside there is that I'll have to rewrite the backend validation to take in json
 
   function onNewItemKeyDown(e: {
@@ -126,7 +126,7 @@
 <form
   bind:this={form}
   method="POST"
-  action="/lists/save"
+  action="/lists/upsert"
   use:enhance={() => {
     return async ({ result }) => {
       if (result.status === 400) {
