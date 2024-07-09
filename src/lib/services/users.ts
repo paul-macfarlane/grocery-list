@@ -2,14 +2,14 @@ import { users, userSessions } from "$lib/db/schema";
 import { db } from "$lib/db";
 import { randomBytes } from "crypto";
 import { and, eq, ne } from "drizzle-orm";
-import type { Cookies } from "@sveltejs/kit";
+import { type Cookies, redirect } from "@sveltejs/kit";
 import {
-  UpdateUserError,
   type UpdateUserInfo,
   type UserInfo,
   type UserSession,
 } from "$lib/types/users";
 import { z } from "zod";
+import { ConflictError, NotFoundError } from "$lib/types/errors";
 
 const adjectives = [
   "Brave",
@@ -175,6 +175,18 @@ export async function deleteUserSession(
   await db.delete(userSessions).where(eq(userSessions.id, sessionId));
 }
 
+export async function getUserForSessionOrRedirect(
+  cookies: Cookies,
+  redirectUrl = "/auth",
+): Promise<UserInfo> {
+  const user = await getUserForSession(cookies);
+  if (!user) {
+    redirect(302, redirectUrl);
+  }
+
+  return user;
+}
+
 export async function getUserForSession(
   cookies: Cookies,
 ): Promise<UserInfo | null> {
@@ -243,7 +255,7 @@ export async function updateUser(
     .from(users)
     .where(eq(users.id, userId));
   if (!userWithIdRes.length) {
-    throw new UpdateUserError("user does not exists", 404);
+    throw new NotFoundError("user");
   }
 
   const userWithUserNameRes = await db
@@ -251,7 +263,7 @@ export async function updateUser(
     .from(users)
     .where(and(eq(users.username, updateUser.username), ne(users.id, userId)));
   if (userWithUserNameRes.length) {
-    throw new UpdateUserError("username already taken", 409);
+    throw new ConflictError("username already taken");
   }
 
   await db

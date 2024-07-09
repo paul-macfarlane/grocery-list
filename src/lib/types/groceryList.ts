@@ -45,7 +45,7 @@ export type GroceryListItem = {
   quantity: number | null;
   notes: string | null;
   link: string | null;
-  group: GroceryListItemGroup | null;
+  group: GroceryListGroup | null;
   createdByUserId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -55,7 +55,7 @@ export type GroceryListFormItem = UpsertGroceryListItem & {
   listKey: string; // needed because each item needs a key so it can be re-arranged as users edit a list
 };
 
-export type GroceryListItemGroup = {
+export type GroceryListGroup = {
   id: number;
   groceryListId: number;
   name: string;

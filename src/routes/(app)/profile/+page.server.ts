@@ -1,18 +1,15 @@
 import type { Actions } from "./$types";
-import { fail, redirect } from "@sveltejs/kit";
+import { fail } from "@sveltejs/kit";
 import {
-  getUserForSession,
+  getUserForSessionOrRedirect,
   parseUpdateUserFromFormData,
   updateUser,
 } from "$lib/services/users";
-import { UpdateUserError } from "$lib/types/users";
+import { ApplicationError } from "$lib/types/errors";
 
 export const actions = {
   default: async (event) => {
-    const user = await getUserForSession(event.cookies);
-    if (!user) {
-      throw redirect(302, "/auth");
-    }
+    const user = await getUserForSessionOrRedirect(event.cookies);
 
     const formData = await event.request.formData();
     const parseRes = parseUpdateUserFromFormData(formData);
@@ -26,7 +23,7 @@ export const actions = {
     try {
       await updateUser(user.id, parseRes.data);
     } catch (e: unknown) {
-      if (e instanceof UpdateUserError) {
+      if (e instanceof ApplicationError) {
         return fail(e.code, {
           validationErrorMap: new Map<string, string>(),
           message: e.message,

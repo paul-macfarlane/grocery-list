@@ -8,5 +8,5 @@ export const GET: RequestHandler = async ({ cookies }) => {
     await deleteUserSession(userSession.id.toString(), cookies);
   }
 
-  throw redirect(302, "/auth");
+  redirect(302, "/auth");
 };

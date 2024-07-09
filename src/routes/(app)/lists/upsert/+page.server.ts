@@ -1,17 +1,14 @@
 import type { Actions } from "./$types";
-import { fail, redirect } from "@sveltejs/kit";
+import { fail } from "@sveltejs/kit";
 import {
   upsertGroceryList,
   parseGroceryListFromFormData,
 } from "$lib/services/groceryList";
-import { getUserForSession } from "$lib/services/users";
+import { getUserForSessionOrRedirect } from "$lib/services/users";
 
 export const actions = {
   default: async (event) => {
-    const user = await getUserForSession(event.cookies);
-    if (!user) {
-      throw redirect(302, "/auth");
-    }
+    const user = await getUserForSessionOrRedirect(event.cookies);
 
     const formData = await event.request.formData();
     const res = parseGroceryListFromFormData(formData);
