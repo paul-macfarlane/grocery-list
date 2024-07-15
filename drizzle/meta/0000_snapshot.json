@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "715864e8-d8d3-4289-80d3-134e1c46243e",
+  "id": "a5f4ebe7-7cbc-4145-942f-65c8cb9b7380",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "grocery_list_groups": {
@@ -100,6 +100,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "substitute_for_item_id": {
+          "name": "substitute_for_item_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "name": {
           "name": "name",
           "type": "text(256)",
@@ -170,6 +177,15 @@
           "columnsFrom": ["grocery_list_group_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "grocery_list_items_substitute_for_item_id_grocery_list_items_id_fk": {
+          "name": "grocery_list_items_substitute_for_item_id_grocery_list_items_id_fk",
+          "tableFrom": "grocery_list_items",
+          "tableTo": "grocery_list_items",
+          "columnsFrom": ["substitute_for_item_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "grocery_list_items_created_by_user_id_users_id_fk": {
