@@ -1,4 +1,10 @@
-import { text, integer, sqliteTable, real } from "drizzle-orm/sqlite-core";
+import {
+  text,
+  integer,
+  sqliteTable,
+  real,
+  type AnySQLiteColumn,
+} from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const userSessions = sqliteTable("user_sessions", {
@@ -55,6 +61,10 @@ export const groceryListItems = sqliteTable("grocery_list_items", {
   groceryListGroupId: integer("grocery_list_group_id").references(
     () => groceryListGroups.id,
     { onDelete: "set null" },
+  ),
+  substituteForItemId: integer("substitute_for_item_id").references(
+    (): AnySQLiteColumn => groceryListItems.id,
+    { onDelete: "cascade" },
   ),
   name: text("name", { length: 256 }).notNull(),
   quantity: integer("quantity"),

@@ -36,11 +36,16 @@ export type UpsertGroceryListItem = {
   notes: string | null;
   link: string | null;
   groupName: string | null;
+  substituteForItemId: number | null;
+
+  listKey: string; // needed by substitutes of new items so they can identify the correct item to be a substitute for
+  substituteForItemListKey: string | null; // needed for substitutes of new items that don't have an id yet
 };
 
 export type GroceryListItem = {
   id: number;
   groceryListId: number;
+  substituteForItemId: number | null;
   name: string;
   quantity: number | null;
   notes: string | null;
@@ -51,9 +56,7 @@ export type GroceryListItem = {
   updatedAt: Date;
 };
 
-export type GroceryListFormItem = UpsertGroceryListItem & {
-  listKey: string; // needed because each item needs a key so it can be re-arranged as users edit a list
-};
+export type GroceryListFormItem = UpsertGroceryListItem;
 
 export type GroceryListGroup = {
   id: number;

@@ -19,7 +19,9 @@ The purpose of this app is to make grocery for me and my girlfriend easier. The 
 - [ ] advanced grocery lists
   - [x] items can be grouped
   - [x] they can also be copied/duplicated to a new list
-  - [ ] items can have substitutes when the item is not available
+  - [x] items can have substitutes when the item is not available
+  - [ ] list form validation (server side errors and client side handling)
+  - [ ] autosave/debouncing
 - [ ] executing a grocery list
   - [ ] a user can enter an interactive ui execute the list
   - [ ] mark items as complete
@@ -48,5 +50,3 @@ This app is built using [Node.js](https://nodejs.org/en), [SvelteKit](https://ki
 5. Install node dependencies `npm i`
 6. Setup db schema by running `npm run db:generate && npm run db:migrate`
 7. Run application using `npm run dev`
-
-If you plan on contributing also make sure to run `npm run prepare` to setup the husky commit hook.

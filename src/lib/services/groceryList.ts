@@ -11,7 +11,7 @@ import type {
   GroceryListMinified,
   UpsertGroceryList,
 } from "$lib/types/groceryList";
-import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
 import { ApplicationError, NotFoundError } from "$lib/types/errors";
 
@@ -20,9 +20,6 @@ type ParseGroceryListFromFormRes = {
   errorMap: Map<string, string>;
 };
 
-// don't love how complicated this parsing is
-// but atm don't have a simpler way to parse dynamically sized/attributed form data and coalescing empty strings to nulls
-// todo this could use some unit tests
 export function parseGroceryListFromFormData(
   formData: FormData,
 ): ParseGroceryListFromFormRes {
@@ -249,6 +246,63 @@ export function parseGroceryListFromFormData(
       );
     }
 
+    let listKey = "";
+    const listKeyCheck = z
+      .string({ message: "must exist as an input" })
+      .safeParse(formData.get(`itemListKey${i}`)?.toString().trim());
+    if (listKeyCheck.success) {
+      listKey = listKeyCheck.data;
+    } else {
+      response.errorMap.set(
+        `itemListKey${i}`,
+        listKeyCheck.error.errors.map((err) => err.message).join(","),
+      );
+    }
+
+    let substituteForItemId: number | null = null;
+    const substituteCheck = z
+      .string({ message: "must exist as an input" })
+      .refine(
+        (val) =>
+          val === "" ||
+          (!isNaN(parseInt(val, 10)) &&
+            parseInt(val, 10).toString() === val &&
+            parseInt(val, 10) > 0),
+        {
+          message: "must be a number greater than 0",
+        },
+      )
+      .transform((val) => {
+        if (val === null || val === "") {
+          return null;
+        }
+
+        return parseInt(val, 10);
+      })
+      .safeParse(formData.get(`substituteFor${i}`)?.toString().trim());
+    if (substituteCheck.success) {
+      substituteForItemId = substituteCheck.data;
+    } else {
+      response.errorMap.set(
+        `substituteFor${i}`,
+        substituteCheck.error.errors.map((err) => err.message).join(","),
+      );
+    }
+
+    let substituteForItemListKey: string | null = null;
+    const subForListKeyCheck = z
+      .string({ message: "must exist as an input" })
+      .nullable()
+      .safeParse(formData.get(`subForListKey${i}`)?.toString().trim());
+    if (subForListKeyCheck.success) {
+      substituteForItemListKey = subForListKeyCheck.data;
+    } else {
+      response.errorMap.set(
+        `subForListKey${i}`,
+        subForListKeyCheck.error.errors.map((err) => err.message).join(","),
+      );
+    }
+
     response.data.items.push({
       id: itemId,
       name,
@@ -256,6 +310,9 @@ export function parseGroceryListFromFormData(
       notes,
       link,
       groupName,
+      listKey,
+      substituteForItemId,
+      substituteForItemListKey,
     });
   }
 
@@ -376,34 +433,113 @@ export async function upsertGroceryList(
     }
 
     if (upsertGroceryList.items.length) {
-      await tx
-        .insert(groceryListItems)
-        .values(
-          upsertGroceryList.items.map((item) => ({
-            id: item.id ?? undefined,
-            groceryListId: groceryListRes[0].id,
-            groceryListGroupId: item.groupName
-              ? groupNameToIdMap.get(item.groupName) ?? null
-              : null,
-            name: item.name,
-            quantity: item.quantity,
-            notes: item.notes,
-            link: item.link,
-            createdByUserId: userId,
-          })),
-        )
-        .onConflictDoUpdate({
-          target: groceryListItems.id,
-          set: {
-            name: sql.raw(`excluded.${groceryListItems.name.name}`),
-            quantity: sql.raw(`excluded.${groceryListItems.quantity.name}`),
-            notes: sql.raw(`excluded.${groceryListItems.notes.name}`),
-            link: sql.raw(`excluded.${groceryListItems.link.name}`),
-            groceryListGroupId: sql.raw(
-              `excluded.${groceryListItems.groceryListGroupId.name}`,
-            ),
-          },
-        });
+      // upsert all items except those that were substitutes for new items, and the new items with substitutes - those need to be upserted one by one since there is no other way to link the items
+      const mainUpserts = upsertGroceryList.items.filter((item) => {
+        if (item.substituteForItemListKey && !item.substituteForItemId) {
+          // filter out that are substitutes for new items
+          return false;
+        }
+
+        // filter out new items that have substitutes
+        return !(
+          !item.id &&
+          !item.substituteForItemListKey &&
+          upsertGroceryList.items.find(
+            (potentialSubItem) =>
+              item.listKey === potentialSubItem.substituteForItemListKey,
+          )
+        );
+      });
+
+      if (mainUpserts.length) {
+        await tx
+          .insert(groceryListItems)
+          .values(
+            mainUpserts.map((item) => ({
+              id: item.id ?? undefined,
+              groceryListId: groceryListRes[0].id,
+              substituteForItemId: item.substituteForItemId,
+              groceryListGroupId: item.groupName
+                ? groupNameToIdMap.get(item.groupName) ?? null
+                : null,
+              name: item.name,
+              quantity: item.quantity,
+              notes: item.notes,
+              link: item.link,
+              createdByUserId: userId,
+            })),
+          )
+          .onConflictDoUpdate({
+            target: groceryListItems.id,
+            set: {
+              name: sql.raw(`excluded.${groceryListItems.name.name}`),
+              substituteForItemId: sql.raw(
+                `excluded.${groceryListItems.substituteForItemId.name}`,
+              ),
+              quantity: sql.raw(`excluded.${groceryListItems.quantity.name}`),
+              notes: sql.raw(`excluded.${groceryListItems.notes.name}`),
+              link: sql.raw(`excluded.${groceryListItems.link.name}`),
+              groceryListGroupId: sql.raw(
+                `excluded.${groceryListItems.groceryListGroupId.name}`,
+              ),
+            },
+          });
+      }
+
+      const newItemsWithSubs = upsertGroceryList.items.filter(
+        (item) =>
+          !!(
+            !item.id &&
+            !item.substituteForItemListKey &&
+            upsertGroceryList.items.find(
+              (potentialSubItem) =>
+                item.listKey === potentialSubItem.substituteForItemListKey,
+            )
+          ),
+      );
+      if (newItemsWithSubs.length) {
+        for (let i = 0; i < newItemsWithSubs.length; i++) {
+          const newItemQueryRes = await tx
+            .insert(groceryListItems)
+            .values([
+              {
+                groceryListId: groceryListRes[0].id,
+                substituteForItemId: newItemsWithSubs[i].substituteForItemId,
+                groceryListGroupId: newItemsWithSubs[i].groupName
+                  ? groupNameToIdMap.get(newItemsWithSubs[i].groupName!) ?? null
+                  : null,
+                name: newItemsWithSubs[i].name,
+                quantity: newItemsWithSubs[i].quantity,
+                notes: newItemsWithSubs[i].notes,
+                link: newItemsWithSubs[i].link,
+                createdByUserId: userId,
+              },
+            ])
+            .returning({
+              id: groceryListItems.id,
+            });
+
+          const subsForNewItem = upsertGroceryList.items.filter(
+            (item) =>
+              item.substituteForItemListKey === newItemsWithSubs[i].listKey,
+          );
+
+          await tx.insert(groceryListItems).values(
+            subsForNewItem.map((sub) => ({
+              groceryListId: groceryListRes[0].id,
+              substituteForItemId: newItemQueryRes[0].id,
+              groceryListGroupId: sub.groupName
+                ? groupNameToIdMap.get(sub.groupName!) ?? null
+                : null,
+              name: sub.name,
+              quantity: sub.quantity,
+              notes: sub.notes,
+              link: sub.link,
+              createdByUserId: userId,
+            })),
+          );
+        }
+      }
     }
   });
 }
@@ -421,7 +557,10 @@ export async function getMinifiedGroceryListsByCreator(
     .from(groceryLists)
     .leftJoin(
       groceryListItems,
-      eq(groceryLists.id, groceryListItems.groceryListId),
+      and(
+        eq(groceryLists.id, groceryListItems.groceryListId),
+        isNull(groceryListItems.substituteForItemId),
+      ),
     )
     .where(eq(groceryLists.createdByUserId, creatorId))
     .groupBy(groceryLists.id);
@@ -500,6 +639,7 @@ export async function getGroceryListByIdAndCreator(
           accList[listRow.grocery_lists.id].items.push({
             id: listRow.grocery_list_items.id,
             groceryListId: listRow.grocery_list_items.groceryListId,
+            substituteForItemId: listRow.grocery_list_items.substituteForItemId,
             name: listRow.grocery_list_items.name,
             quantity: listRow.grocery_list_items.quantity,
             notes: listRow.grocery_list_items.notes,
@@ -533,7 +673,7 @@ export async function duplicateGroceryList(
     const newListRows = await tx
       .insert(groceryLists)
       .values({
-        title: listToDuplicate.title,
+        title: `Copy of ${listToDuplicate.title}`,
         budget: listToDuplicate.budget,
         createdByUserId: userId,
       })
@@ -569,19 +709,89 @@ export async function duplicateGroceryList(
         });
       }
 
-      await tx.insert(groceryListItems).values(
-        listToDuplicate.items.map((item) => ({
-          groceryListId: newListRows[0].id,
-          groceryListGroupId: item.group
-            ? newListGroupNameToId.get(item.group.name)
-            : undefined,
-          name: item.name,
-          quantity: item.quantity,
-          notes: item.notes,
-          link: item.link,
-          createdByUserId: userId,
-        })),
+      // items with substitutes, and items that are substitutes, need to be duplicated separately since the items with substitutes need to be created before the substitutes are created
+      const mainItemsWithoutSubs = listToDuplicate.items.filter((item) => {
+        if (item.substituteForItemId) {
+          // filter out items that are substitutes
+          return false;
+        }
+
+        // filter out items that have substitutes
+        return !listToDuplicate.items.find(
+          (potentialSubItem) =>
+            item.id === potentialSubItem.substituteForItemId,
+        );
+      });
+
+      if (mainItemsWithoutSubs.length) {
+        await tx.insert(groceryListItems).values(
+          mainItemsWithoutSubs.map((item) => ({
+            groceryListId: newListRows[0].id,
+            substituteForItemId: item.substituteForItemId,
+            groceryListGroupId: item.group
+              ? newListGroupNameToId.get(item.group.name)
+              : undefined,
+            name: item.name,
+            quantity: item.quantity,
+            notes: item.notes,
+            link: item.link,
+            createdByUserId: userId,
+          })),
+        );
+      }
+
+      const itemsWithSubs = listToDuplicate.items.filter(
+        (item) =>
+          !!(
+            !item.substituteForItemId &&
+            listToDuplicate.items.find(
+              (potentialSubItem) =>
+                item.id === potentialSubItem.substituteForItemId,
+            )
+          ),
       );
+      if (itemsWithSubs.length) {
+        for (let i = 0; i < itemsWithSubs.length; i++) {
+          const newItemQueryRes = await tx
+            .insert(groceryListItems)
+            .values([
+              {
+                groceryListId: newListRows[0].id,
+                substituteForItemId: itemsWithSubs[i].substituteForItemId,
+                groceryListGroupId: itemsWithSubs[i].group
+                  ? newListGroupNameToId.get(itemsWithSubs[i].group!.name)
+                  : undefined,
+                name: itemsWithSubs[i].name,
+                quantity: itemsWithSubs[i].quantity,
+                notes: itemsWithSubs[i].notes,
+                link: itemsWithSubs[i].link,
+                createdByUserId: userId,
+              },
+            ])
+            .returning({
+              id: groceryListItems.id,
+            });
+
+          const subsForNewItem = listToDuplicate.items.filter(
+            (item) => item.substituteForItemId === itemsWithSubs[i].id,
+          );
+
+          await tx.insert(groceryListItems).values(
+            subsForNewItem.map((sub) => ({
+              groceryListId: newListRows[0].id,
+              substituteForItemId: newItemQueryRes[0].id,
+              groceryListGroupId: sub.group
+                ? newListGroupNameToId.get(sub.group!.name) ?? null
+                : null,
+              name: sub.name,
+              quantity: sub.quantity,
+              notes: sub.notes,
+              link: sub.link,
+              createdByUserId: userId,
+            })),
+          );
+        }
+      }
     }
   });
 }
