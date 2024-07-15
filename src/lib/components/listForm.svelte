@@ -3,21 +3,40 @@
   import type { GroceryListFormData } from "$lib/types/groceryList";
   import Button from "./button.svelte";
   import IconButton from "./iconButton.svelte";
+  import Modal from "./modal.svelte";
   import addSvg from "$lib/assets/add.svg";
   import removeSvg from "$lib/assets/remove.svg";
+  import substituteSvg from "$lib/assets/substitute.svg";
   import { goto } from "$app/navigation";
+  import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/profile/$types";
 
   type ListFormProps = {
-    groceryList: GroceryListFormData;
+    initialList: GroceryListFormData;
   };
 
-  const { groceryList }: ListFormProps = $props();
-  let activeList: GroceryListFormData = $state({ ...groceryList });
+  const { initialList }: ListFormProps = $props();
+
+  let groceryList = $state({
+    id: initialList.id,
+    title: initialList.title,
+    budget: initialList.budget,
+  });
+  let mainItems = $state(
+    initialList.items.filter((item) => !item.substituteForItemListKey),
+  );
+  let substituteItems = $state(
+    initialList.items.filter((item) => item.substituteForItemListKey),
+  );
+
   let newItemName = $state("");
   let groupUserIsTyping = $state("");
-  let activeGroups = $derived.by(() => {
+  let substituteItemListKey = $state("");
+  let newSubstituteName = $state("");
+
+  let selectedListGroups = $derived.by(() => {
     const uniqueGroupNames = new Set<string>();
-    return activeList.items
+
+    return mainItems
       .filter(({ groupName }) => {
         if (
           !groupName ||
@@ -33,6 +52,12 @@
       })
       .map(({ groupName }) => groupName!);
   });
+  let selectedSubstituteItems = $derived.by(() =>
+    substituteItems.filter(
+      (sub) => sub.substituteForItemListKey === substituteItemListKey,
+    ),
+  );
+
   let form: HTMLFormElement; // todo can use this to programmatically submit via form.requestSubmit() when debouncing
   // todo it is kinda annoying how hitting enter submits (even though that is technically how forms are supposed to work)
   // user might not expect that, think about how ot prevent this form-wide but also allow upsert button to work
@@ -47,17 +72,13 @@
     if (e.key === "Enter") {
       e.preventDefault();
 
-      if (e.currentTarget.value.trim().length) {
-        addItem(e.currentTarget.value);
-        e.currentTarget.value = "";
-      }
+      addItem(e.currentTarget.value);
+      e.currentTarget.value = "";
     }
   }
 
   function onNewItemClick() {
-    if (newItemName.trim().length) {
-      addItem(newItemName.trim());
-    }
+    addItem(newItemName.trim());
   }
 
   function onNewItemChange(e: { currentTarget: HTMLInputElement }) {
@@ -68,82 +89,242 @@
     const newItem = {
       listKey: crypto.randomUUID(),
       id: null,
+      substituteForItemId: null,
       name,
       quantity: null,
       notes: null,
       link: null,
       groupName: null,
+      substituteForItemListKey: null,
     };
 
-    activeList.items.unshift(newItem);
+    mainItems.unshift(newItem);
     newItemName = "";
   }
 
   function onTitleChange(e: { currentTarget: HTMLInputElement }) {
-    activeList.title = e.currentTarget.value;
+    groceryList.title = e.currentTarget.value;
     // todo debounce submission, maybe validation
   }
 
   function onBudgetChange(e: { currentTarget: HTMLInputElement }) {
-    activeList.budget = parseFloat(e.currentTarget.value);
+    groceryList.budget = parseFloat(e.currentTarget.value);
     // todo debounce submission, maybe validation
   }
 
   function onRemoveItem(itemListKey: string) {
-    activeList.items = activeList.items.filter(
-      ({ listKey }) => itemListKey !== listKey,
+    mainItems = mainItems.filter(({ listKey }) => itemListKey !== listKey);
+    substituteItems = substituteItems.filter(
+      (sub) => sub.substituteForItemListKey !== itemListKey,
     );
+
     // todo debounce submission, maybe validation
   }
 
-  function onNameChange(e: { currentTarget: HTMLInputElement }, i: number) {
-    activeList.items[i].name = e.currentTarget.value;
+  function onItemNameChange(e: { currentTarget: HTMLInputElement }, i: number) {
+    mainItems[i].name = e.currentTarget.value;
     // todo debounce submission, maybe validation
   }
 
-  function onQuantityChange(e: { currentTarget: HTMLInputElement }, i: number) {
-    activeList.items[i].quantity = +e.currentTarget.value;
+  function onItemQuantityChange(
+    e: { currentTarget: HTMLInputElement },
+    i: number,
+  ) {
+    mainItems[i].quantity = +e.currentTarget.value;
     // todo debounce submission, maybe validation
   }
 
-  function onNotesChange(e: { currentTarget: HTMLInputElement }, i: number) {
-    activeList.items[i].notes = e.currentTarget.value;
+  function onItemNotesChange(
+    e: { currentTarget: HTMLInputElement },
+    i: number,
+  ) {
+    mainItems[i].notes = e.currentTarget.value;
     // todo debounce submission, maybe validation
   }
 
-  function onLinkChange(e: { currentTarget: HTMLInputElement }, i: number) {
-    activeList.items[i].link = e.currentTarget.value;
+  function onItemLinkChange(e: { currentTarget: HTMLInputElement }, i: number) {
+    mainItems[i].link = e.currentTarget.value;
     // todo debounce submission, maybe validation
   }
 
-  function onGroupChange(e: { currentTarget: HTMLInputElement }, i: number) {
+  function onItemGroupChange(
+    e: { currentTarget: HTMLInputElement },
+    i: number,
+  ) {
     groupUserIsTyping = e.currentTarget.value;
-    activeList.items[i].groupName = e.currentTarget.value;
+    mainItems[i].groupName = e.currentTarget.value;
     // todo debounce submission, maybe validation
   }
+
+  function onSubstituteNameChange(
+    e: { currentTarget: HTMLInputElement },
+    listKey: string,
+  ) {
+    const indexOfSub = substituteItems.findIndex(
+      (sub) => sub.listKey === listKey,
+    );
+    if (indexOfSub !== -1) {
+      substituteItems[indexOfSub].name = e.currentTarget.value;
+    }
+    // todo debounce submission, maybe validation
+  }
+
+  function onSubstituteQuantityChange(
+    e: { currentTarget: HTMLInputElement },
+    listKey: string,
+  ) {
+    const indexOfSub = substituteItems.findIndex(
+      (sub) => sub.listKey === listKey,
+    );
+    if (indexOfSub !== -1) {
+      substituteItems[indexOfSub].quantity = +e.currentTarget.value;
+    }
+    // todo debounce submission, maybe validation
+  }
+
+  function onSubstituteNotesChange(
+    e: { currentTarget: HTMLInputElement },
+    listKey: string,
+  ) {
+    const indexOfSub = substituteItems.findIndex(
+      (sub) => sub.listKey === listKey,
+    );
+    if (indexOfSub !== -1) {
+      substituteItems[indexOfSub].notes = e.currentTarget.value;
+    }
+    // todo debounce submission, maybe validation
+  }
+
+  function onSubstituteLinkChange(
+    e: { currentTarget: HTMLInputElement },
+    listKey: string,
+  ) {
+    const indexOfSub = substituteItems.findIndex(
+      (sub) => sub.listKey === listKey,
+    );
+    if (indexOfSub !== -1) {
+      substituteItems[indexOfSub].link = e.currentTarget.value;
+    }
+    // todo debounce submission, maybe validation
+  }
+
+  function onRemoveSubstitute(listKey: string) {
+    substituteItems = substituteItems.filter((sub) => sub.listKey !== listKey);
+  }
+
+  function onNewSubstituteKeyDown(e: {
+    preventDefault: () => void;
+    key: string;
+    currentTarget: HTMLInputElement;
+  }) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const substituteForItemId =
+        mainItems.find((item) => item.listKey === substituteItemListKey)?.id ??
+        null;
+      addSubstitute(
+        e.currentTarget.value.trim(),
+        substituteForItemId,
+        substituteItemListKey,
+      );
+      e.currentTarget.value = "";
+    }
+  }
+
+  function addSubstitute(
+    name: string,
+    substituteForItemId: number | null,
+    substituteForItemListKey: string,
+  ) {
+    const newSubstitute = {
+      listKey: crypto.randomUUID(),
+      id: null,
+      substituteForItemId,
+      name,
+      quantity: null,
+      notes: null,
+      link: null,
+      groupName: null,
+      substituteForItemListKey,
+    };
+
+    substituteItems.unshift(newSubstitute);
+    newSubstituteName = "";
+  }
+
+  function onNewSubstituteClick() {
+    const substituteForItemId =
+      mainItems.find((item) => item.listKey === substituteItemListKey)?.id ??
+      null;
+    addSubstitute(
+      newSubstituteName.trim(),
+      substituteForItemId,
+      substituteItemListKey,
+    );
+  }
+
+  function onNewSubstituteChange(e: { currentTarget: HTMLInputElement }) {
+    newSubstituteName = e.currentTarget.value;
+  }
+
+  function onToggleSubstituteModal(itemListKey: string) {
+    substituteItemListKey = itemListKey;
+  }
+
+  const submitFunction: SubmitFunction = ({ formData }) => {
+    if (substituteItems.length) {
+      let index = mainItems.length;
+
+      substituteItems.forEach((sub) => {
+        const itemSubbedFor = mainItems.find(
+          (item) => item.listKey === sub.substituteForItemListKey,
+        );
+
+        formData.set(`itemId${index}`, sub.id?.toString() ?? "");
+        formData.set(
+          `substituteFor${index}`,
+          itemSubbedFor?.id?.toString() ?? "",
+        );
+        formData.set(
+          `subForListKey${index}`,
+          sub.substituteForItemListKey ?? "",
+        );
+        formData.set(`itemListKey${index}`, sub.listKey);
+        formData.set(`name${index}`, sub.name);
+        formData.set(`quantity${index}`, sub.quantity?.toString() ?? "");
+        formData.set(`notes${index}`, sub.notes ?? "");
+        formData.set(`link${index}`, sub.link ?? "");
+        formData.set(`groupName${index}`, itemSubbedFor?.groupName ?? "");
+        index++;
+      });
+
+      formData.set("count", `${mainItems.length + substituteItems.length}`);
+    }
+
+    return async ({ result }) => {
+      if (result.status === 400) {
+        console.error(result);
+        // todo handle and display validation errors
+      } else if (result.status === 204) {
+        void goto("/lists");
+      } else {
+        console.error(result);
+        // todo handle and display error
+      }
+    };
+  };
 </script>
 
 <form
   bind:this={form}
   method="POST"
   action="/lists/upsert"
-  use:enhance={() => {
-    return async ({ result }) => {
-      if (result.status === 400) {
-        console.error(result);
-        // todo display validation errors
-      } else if (result.status === 204) {
-        void goto("/lists");
-      } else {
-        console.error(result);
-        // todo display error
-      }
-    };
-  }}
+  use:enhance={submitFunction}
 >
   <input type="hidden" name="id" value={groceryList.id} />
 
-  <div id="title-section">
+  <div class="title-section">
     <div class="title-section-item">
       <label for="title"> Title </label>
       <input
@@ -174,13 +355,13 @@
     </div>
   </div>
 
-  <div id="items-header">
-    <div id="save-section">
-      <p id="items-p">Items</p>
+  <div class="items-header">
+    <div class="save-section">
+      <p class="items-p">Items</p>
       <Button buttonClass="save" type="submit" color="primary">Save</Button>
     </div>
 
-    <div id="new-item-section">
+    <div class="new-item-section">
       <input
         class="list-item-input"
         onkeydown={onNewItemKeyDown}
@@ -199,32 +380,33 @@
     </div>
   </div>
 
-  <div id="items-list">
-    <input type="hidden" name="count" value={activeList.items.length} />
+  <div class="items-list">
+    <input type="hidden" name="count" value={mainItems.length} />
 
-    <ul>
-      {#if !activeList.items.length}
+    <ul class="items-ul">
+      {#if !mainItems.length}
         No items in list
       {/if}
 
-      {#each activeList.items as item, i (item.listKey)}
+      {#each mainItems as item, i (item.listKey)}
         <li class="list-item">
-          <input
-            type="hidden"
-            name={`itemId${i}`}
-            value={activeList.items[i].id}
-          />
+          <input type="hidden" name={`itemId${i}`} value={mainItems[i].id} />
+
+          <input type="hidden" name={`substituteFor${i}`} value={null} />
+          <input type="hidden" name={`subForListKey${i}`} value={null} />
+
+          <input type="hidden" name={`itemListKey${i}`} value={item.listKey} />
 
           <div class="list-item-attribute">
             <label for={`name${i}`}> Name </label>
             <input
               id={`name${i}`}
               class="list-item-input"
-              value={activeList.items[i].name}
+              value={mainItems[i].name}
               required
               name={`name${i}`}
               type="text"
-              oninput={(e) => onNameChange(e, i)}
+              oninput={(e) => onItemNameChange(e, i)}
               placeholder="name"
             />
           </div>
@@ -234,11 +416,11 @@
             <input
               id={`quantity${i}`}
               class="list-item-input"
-              value={activeList.items[i].quantity}
+              value={mainItems[i].quantity}
               name={`quantity${i}`}
               type="number"
               min={1}
-              oninput={(e) => onQuantityChange(e, i)}
+              oninput={(e) => onItemQuantityChange(e, i)}
               placeholder="1"
             />
           </div>
@@ -248,10 +430,10 @@
             <input
               id={`notes${i}`}
               class="list-item-input"
-              value={activeList.items[i].notes}
+              value={mainItems[i].notes}
               name={`notes${i}`}
               type="text"
-              oninput={(e) => onNotesChange(e, i)}
+              oninput={(e) => onItemNotesChange(e, i)}
               placeholder="notes"
             />
           </div>
@@ -261,10 +443,10 @@
             <input
               id={`link${i}`}
               class="list-item-input"
-              value={activeList.items[i].link}
+              value={mainItems[i].link}
               name={`link${i}`}
               type="text"
-              oninput={(e) => onLinkChange(e, i)}
+              oninput={(e) => onItemLinkChange(e, i)}
               placeholder="https://google.com"
             />
           </div>
@@ -278,26 +460,32 @@
               name={`groupName${i}`}
               value={item.groupName}
               placeholder="group"
-              oninput={(e) => onGroupChange(e, i)}
+              oninput={(e) => onItemGroupChange(e, i)}
               onblur={() => {
                 groupUserIsTyping = "";
               }}
             />
 
             <datalist id={`groupList${i}`}>
-              {#each activeGroups as group (group)}
+              {#each selectedListGroups as group (group)}
                 <option value={group}> </option>
               {/each}
             </datalist>
           </div>
 
-          <div class="remove-btn">
+          <div class="bottom-row">
+            <IconButton
+              onclick={() => onToggleSubstituteModal(item.listKey)}
+              src={substituteSvg}
+              type="button"
+              alt="substitute item"
+            />
+
             <IconButton
               onclick={() => onRemoveItem(item.listKey)}
               type="button"
               alt="remove item"
               src={removeSvg}
-              buttonClass="remove-btn"
             />
           </div>
         </li>
@@ -306,8 +494,131 @@
   </div>
 </form>
 
+<Modal open={!!substituteItemListKey}>
+  <div class="substitute-modal">
+    <h2>
+      {mainItems.find((item) => item.listKey === substituteItemListKey)?.name} substitutes
+    </h2>
+
+    <div class="new-item-section">
+      <input
+        class="list-item-input"
+        onkeydown={onNewSubstituteKeyDown}
+        onchange={onNewSubstituteChange}
+        name="new-sub"
+        type="text"
+        placeholder="add new substitute"
+        value={newSubstituteName}
+      />
+      <IconButton
+        onclick={onNewSubstituteClick}
+        type="button"
+        alt="add substitute"
+        src={addSvg}
+      />
+    </div>
+
+    <ul class="substitute-list">
+      {#if !selectedSubstituteItems.length}
+        No substitutes
+      {/if}
+
+      {#each selectedSubstituteItems as sub, i (sub.listKey)}
+        <li class="list-item">
+          <input type="hidden" name={`subItemId${i}`} value={sub.id} />
+
+          <input
+            type="hidden"
+            name={`substituteFor${i}`}
+            value={mainItems.find(
+              (item) => item.listKey === sub.substituteForItemListKey,
+            )?.id}
+          />
+
+          <input
+            type="hidden"
+            name={`subItemListKey${i}`}
+            value={sub.listKey}
+          />
+
+          <div class="list-item-attribute">
+            <label for={`subName${i}`}> Name </label>
+            <input
+              id={`subName${i}`}
+              class="list-item-input"
+              value={sub.name}
+              required
+              name={`subName${i}`}
+              type="text"
+              oninput={(e) => onSubstituteNameChange(e, sub.listKey)}
+              placeholder="name"
+            />
+          </div>
+
+          <div class="list-item-attribute">
+            <label for={`subQuantity${i}`}> Quantity </label>
+            <input
+              id={`subQuantity${i}`}
+              class="list-item-input"
+              value={sub.quantity}
+              name={`subQuantity${i}`}
+              type="number"
+              min={1}
+              oninput={(e) => onSubstituteQuantityChange(e, sub.listKey)}
+              placeholder="1"
+            />
+          </div>
+
+          <div class="list-item-attribute">
+            <label for={`subNotes${i}`}> Notes </label>
+            <input
+              id={`subNotes${i}`}
+              class="list-item-input"
+              value={sub.notes}
+              name={`subNotes${i}`}
+              type="text"
+              oninput={(e) => onSubstituteNotesChange(e, sub.listKey)}
+              placeholder="notes"
+            />
+          </div>
+
+          <div class="list-item-attribute">
+            <label for={`subLink${i}`}> Link </label>
+            <input
+              id={`subLink${i}`}
+              class="list-item-input"
+              value={sub.link}
+              name={`subLink${i}`}
+              type="text"
+              oninput={(e) => onSubstituteLinkChange(e, sub.listKey)}
+              placeholder="https://google.com"
+            />
+          </div>
+
+          <div class="sub-bottom-row">
+            <IconButton
+              onclick={() => onRemoveSubstitute(sub.listKey)}
+              type="button"
+              alt="remove substitute"
+              src={removeSvg}
+            />
+          </div>
+        </li>
+      {/each}
+    </ul>
+
+    <Button
+      onclick={() => {
+        substituteItemListKey = "";
+      }}
+      buttonClass="close-substitute"
+      color="secondary">Close</Button
+    >
+  </div>
+</Modal>
+
 <style>
-  #title-section {
+  .title-section {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -336,14 +647,14 @@
     align-items: center;
   }
 
-  #items-list {
+  .items-list {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
   }
 
-  #items-header {
+  .items-header {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -362,11 +673,11 @@
     }
   }
 
-  #items-p {
+  .items-p {
     font-size: 20px;
   }
 
-  #save-section {
+  .save-section {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -374,14 +685,14 @@
     font-size: 18px;
   }
 
-  #new-item-section {
+  .new-item-section {
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  /* todo use different number of columns based on screen  */
-  ul {
+  .substitute-list,
+  .items-ul {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -391,13 +702,13 @@
   }
 
   @media only screen and (min-width: 640px) {
-    ul {
+    .items-ul {
       grid-template-columns: [first] auto [second] auto;
     }
   }
 
   @media only screen and (min-width: 1024px) {
-    ul {
+    .items-ul {
       grid-template-columns: [first] auto [second] auto [third] auto;
     }
   }
@@ -413,11 +724,10 @@
     padding: 16px;
   }
 
-  :global {
-    .remove-btn {
-      width: min-content !important;
-      align-self: end !important;
-    }
+  .bottom-row {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .list-item-attribute {
@@ -431,5 +741,28 @@
   .list-item-input {
     padding: 4px;
     font-size: 14px;
+  }
+
+  :global {
+    .substitute-modal {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+    }
+  }
+
+  .sub-bottom-row {
+    display: flex;
+    width: 100%;
+    justify-content: end;
+  }
+
+  :global {
+    .close-substitute {
+      align-self: end;
+    }
   }
 </style>

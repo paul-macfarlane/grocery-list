@@ -2,7 +2,7 @@
   import ListForm from "$lib/components/listForm.svelte";
   import type { GroceryListFormData } from "$lib/types/groceryList";
 
-  const groceryList: GroceryListFormData = {
+  const initialList: GroceryListFormData = {
     id: null,
     title: "",
     budget: null,
@@ -12,7 +12,4 @@
 
 <h2>Create List</h2>
 
-<ListForm {groceryList} />
-
-<style>
-</style>
+<ListForm {initialList} />

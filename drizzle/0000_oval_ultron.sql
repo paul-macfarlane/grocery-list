@@ -13,6 +13,7 @@ CREATE TABLE `grocery_list_items` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`grocery_list_id` integer NOT NULL,
 	`grocery_list_group_id` integer,
+	`substitute_for_item_id` integer,
 	`name` text(256) NOT NULL,
 	`quantity` integer,
 	`notes` text,
@@ -22,6 +23,7 @@ CREATE TABLE `grocery_list_items` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`grocery_list_id`) REFERENCES `grocery_lists`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`grocery_list_group_id`) REFERENCES `grocery_list_groups`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`substitute_for_item_id`) REFERENCES `grocery_list_items`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`created_by_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
