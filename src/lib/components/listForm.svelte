@@ -118,6 +118,9 @@
   }
 
   function onRemoveItem(itemListKey: string) {
+    // see comment above declaration of formErrorMap for why this is here
+    formErrorMap = new Map<string, string>();
+
     mainItems = mainItems.filter(({ listKey }) => itemListKey !== listKey);
     substituteItems = substituteItems.filter(
       (sub) => sub.substituteForItemListKey !== itemListKey,

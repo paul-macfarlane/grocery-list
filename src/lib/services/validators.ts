@@ -13,6 +13,7 @@ export const validateAndTransformStrToNum = z
   )
   .transform((val) => parseInt(val, 10));
 
+// todo update this to handle UpsertGroceryListItems, move to different file
 type SubstituteListItemParam = {
   name: unknown;
   quantity?: unknown;
