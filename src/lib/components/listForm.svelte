@@ -9,6 +9,7 @@
   import substituteSvg from "$lib/assets/substitute.svg";
   import { goto } from "$app/navigation";
   import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/lists/upsert/$types";
+  import { safeParseSubstituteListItem } from "$lib/services/validators";
 
   type ListFormProps = {
     initialList: GroceryListFormData;
@@ -32,7 +33,10 @@
   let groupUserIsTyping = $state("");
   let substituteItemListKey = $state("");
   let newSubstituteName = $state("");
+  // todo formErrorMap is bugged right now because the key is an array index but it needs ot be listKey so that when user removes item previous error persists
+  // that, or clear error map when item is removed, which is easier but hacky
   let formErrorMap = $state(new Map<string, string>());
+  let subFormErrorMap = $state(new Map<string, string>());
 
   let selectedListGroups = $derived.by(() => {
     const uniqueGroupNames = new Set<string>();
@@ -330,6 +334,29 @@
       }
     };
   };
+
+  function onCloseSubstituteModal() {
+    let newErrorMap = new Map<string, string>();
+    selectedSubstituteItems.forEach(
+      ({ name, quantity, notes, link, listKey: errorMapSuffix }) => {
+        const listItemRes = safeParseSubstituteListItem({
+          name,
+          quantity,
+          notes,
+          link,
+          errorMapSuffix,
+        });
+        if (listItemRes.errorMap.size > 0) {
+          newErrorMap = new Map([...newErrorMap, ...listItemRes.errorMap]);
+        }
+      },
+    );
+
+    subFormErrorMap = newErrorMap;
+    if (newErrorMap.size === 0) {
+      substituteItemListKey = "";
+    }
+  }
 </script>
 
 <form
@@ -548,7 +575,6 @@
   </div>
 </form>
 
-<!-- todo substitute validation? -->
 <Modal open={!!substituteItemListKey}>
   <div class="substitute-modal">
     <h2>
@@ -582,6 +608,11 @@
 
       {#each selectedSubstituteItems as sub, i (sub.listKey)}
         <li class="list-item">
+          {#if !!subFormErrorMap.get(`name${sub.listKey}`)?.length}
+            <div class="error">
+              Name {subFormErrorMap.get(`name${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subName${i}`}> Name </label>
             <input
@@ -598,6 +629,11 @@
             />
           </div>
 
+          {#if !!subFormErrorMap.get(`quantity${sub.listKey}`)?.length}
+            <div class="error">
+              Quantity {subFormErrorMap.get(`quantity${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subQuantity${i}`}> Quantity </label>
             <input
@@ -612,6 +648,11 @@
             />
           </div>
 
+          {#if !!subFormErrorMap.get(`notes${sub.listKey}`)?.length}
+            <div class="error">
+              Notes {subFormErrorMap.get(`notes${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subNotes${i}`}> Notes </label>
             <input
@@ -627,6 +668,11 @@
             />
           </div>
 
+          {#if !!subFormErrorMap.get(`link${sub.listKey}`)?.length}
+            <div class="error">
+              Link {subFormErrorMap.get(`link${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subLink${i}`}> Link </label>
             <input
@@ -655,9 +701,7 @@
     </ul>
 
     <Button
-      onclick={() => {
-        substituteItemListKey = "";
-      }}
+      onclick={onCloseSubstituteModal}
       buttonClass="close-substitute"
       color="secondary">Close</Button
     >
