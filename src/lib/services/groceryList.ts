@@ -73,7 +73,7 @@ export function parseGroceryListFromFormData(
   const titleCheck = z
     .string({ message: "must exist as an input" })
     .min(1, "is required")
-    .max(256, "cannot be more than 256 characters")
+    .max(256, "cannot be > 256 characters")
     .safeParse(formData.get("title")?.toString().trim());
   if (titleCheck.success) {
     response.data.title = titleCheck.data;
@@ -89,7 +89,7 @@ export function parseGroceryListFromFormData(
     .refine(
       (val) => val === "" || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0),
       {
-        message: "must be a number greater than or equal to 0",
+        message: "must be >= 0.00",
       },
     )
     .transform((val) => {
@@ -141,7 +141,7 @@ export function parseGroceryListFromFormData(
     const nameCheck = z
       .string({ message: "must exist as an input" })
       .min(1, "is required")
-      .max(256, "cannot be more than 256 characters")
+      .max(256, "cannot be > 256 characters")
       .safeParse(formData.get(`name${i}`)?.toString().trim());
     let name = "";
     if (nameCheck.success) {
@@ -162,7 +162,7 @@ export function parseGroceryListFromFormData(
             parseInt(val, 10).toString() === val &&
             parseInt(val, 10) > 0),
         {
-          message: "must be a number greater than 0",
+          message: "must be > 0",
         },
       )
       .transform((val) => {
@@ -185,7 +185,7 @@ export function parseGroceryListFromFormData(
 
     const notesCheck = z
       .string({ message: "must be set" })
-      .max(256, "cannot be more than 256 characters")
+      .max(256, "cannot be > 256 characters")
       .transform((val) => {
         if (val === "") {
           return null;
@@ -206,7 +206,7 @@ export function parseGroceryListFromFormData(
 
     const linkCheck = z
       .string({ message: "must be set" })
-      .max(256, "cannot be more than 256 characters")
+      .max(256, "cannot be > 256 characters")
       .transform((val) => {
         if (val === "") {
           return null;
@@ -227,7 +227,7 @@ export function parseGroceryListFromFormData(
 
     const groupNameCheck = z
       .string({ message: "must be set" })
-      .max(256, "cannot be more than 256 characters")
+      .max(256, "cannot be > 256 characters")
       .transform((val) => {
         if (val === "") {
           return null;
@@ -269,7 +269,7 @@ export function parseGroceryListFromFormData(
             parseInt(val, 10).toString() === val &&
             parseInt(val, 10) > 0),
         {
-          message: "must be a number greater than 0",
+          message: "must be > 0",
         },
       )
       .transform((val) => {

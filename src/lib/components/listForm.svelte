@@ -8,7 +8,7 @@
   import removeSvg from "$lib/assets/remove.svg";
   import substituteSvg from "$lib/assets/substitute.svg";
   import { goto } from "$app/navigation";
-  import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/profile/$types";
+  import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/lists/upsert/$types";
 
   type ListFormProps = {
     initialList: GroceryListFormData;
@@ -32,6 +32,7 @@
   let groupUserIsTyping = $state("");
   let substituteItemListKey = $state("");
   let newSubstituteName = $state("");
+  let formErrorMap = $state(new Map<string, string>());
 
   let selectedListGroups = $derived.by(() => {
     const uniqueGroupNames = new Set<string>();
@@ -303,14 +304,29 @@
     }
 
     return async ({ result }) => {
-      if (result.status === 400) {
-        console.error(result);
-        // todo handle and display validation errors
-      } else if (result.status === 204) {
-        void goto("/lists");
-      } else {
-        console.error(result);
-        // todo handle and display error
+      switch (result.type) {
+        case "success":
+          formErrorMap = new Map<string, string>();
+          void goto("/lists");
+          break;
+        case "failure":
+          if (result.data && result.data.errorMap.size > 0) {
+            formErrorMap = result.data.errorMap;
+          } else {
+            formErrorMap = new Map<string, string>().set(
+              "form",
+              "An unexpected error occurred",
+            );
+          }
+
+          break;
+        case "error":
+          formErrorMap = new Map<string, string>().set(
+            "form",
+            "An unexpected error occurred",
+          );
+
+          break;
       }
     };
   };
@@ -323,8 +339,16 @@
   use:enhance={submitFunction}
 >
   <input type="hidden" name="id" value={groceryList.id} />
+  <!--     todo is it worth adding error handling for the hidden inputs?     -->
 
   <div class="title-section">
+    {#if !!formErrorMap.get("form")?.length}
+      <div class="title-section-error">{formErrorMap.get("form")}</div>
+    {/if}
+
+    {#if !!formErrorMap.get("title")?.length}
+      <div class="title-section-error">Title {formErrorMap.get("title")}</div>
+    {/if}
     <div class="title-section-item">
       <label for="title"> Title </label>
       <input
@@ -336,9 +360,14 @@
         value={groceryList.title}
         placeholder="Title"
         onchange={onTitleChange}
+        minlength={1}
+        maxlength={256}
       />
     </div>
 
+    {#if !!formErrorMap.get("budget")?.length}
+      <div class="title-section-error">Budget {formErrorMap.get("budget")}</div>
+    {/if}
     <div class="title-section-item">
       <label for="budget"> Budget </label>
       <input
@@ -370,6 +399,8 @@
         type="text"
         placeholder="add new item"
         value={newItemName}
+        minlength={1}
+        maxlength={256}
       />
       <IconButton
         onclick={onNewItemClick}
@@ -382,6 +413,7 @@
 
   <div class="items-list">
     <input type="hidden" name="count" value={mainItems.length} />
+    <!--     todo is it worth adding error handling for the hidden inputs?     -->
 
     <ul class="items-ul">
       {#if !mainItems.length}
@@ -390,13 +422,15 @@
 
       {#each mainItems as item, i (item.listKey)}
         <li class="list-item">
+          <!--     todo is it worth adding error handling for the hidden inputs?     -->
           <input type="hidden" name={`itemId${i}`} value={mainItems[i].id} />
-
           <input type="hidden" name={`substituteFor${i}`} value={null} />
           <input type="hidden" name={`subForListKey${i}`} value={null} />
-
           <input type="hidden" name={`itemListKey${i}`} value={item.listKey} />
 
+          {#if !!formErrorMap.get(`name${i}`)?.length}
+            <div class="error">Name {formErrorMap.get(`name${i}`)}</div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`name${i}`}> Name </label>
             <input
@@ -408,9 +442,14 @@
               type="text"
               oninput={(e) => onItemNameChange(e, i)}
               placeholder="name"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`quantity${i}`)?.length}
+            <div class="error">Quantity {formErrorMap.get(`quantity${i}`)}</div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`quantity${i}`}> Quantity </label>
             <input
@@ -425,6 +464,9 @@
             />
           </div>
 
+          {#if !!formErrorMap.get(`notes${i}`)?.length}
+            <div class="error">Notes {formErrorMap.get(`notes${i}`)}</div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`notes${i}`}> Notes </label>
             <input
@@ -435,9 +477,14 @@
               type="text"
               oninput={(e) => onItemNotesChange(e, i)}
               placeholder="notes"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`link${i}`)?.length}
+            <div class="error">Link {formErrorMap.get(`link${i}`)}</div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`link${i}`}> Link </label>
             <input
@@ -448,9 +495,14 @@
               type="text"
               oninput={(e) => onItemLinkChange(e, i)}
               placeholder="https://google.com"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`groupName${i}`)?.length}
+            <div class="error">Group {formErrorMap.get(`groupName${i}`)}</div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`groupInput${i}`}> Group </label>
             <input
@@ -464,6 +516,8 @@
               onblur={() => {
                 groupUserIsTyping = "";
               }}
+              minlength={1}
+              maxlength={256}
             />
 
             <datalist id={`groupList${i}`}>
@@ -494,6 +548,7 @@
   </div>
 </form>
 
+<!-- todo substitute validation? -->
 <Modal open={!!substituteItemListKey}>
   <div class="substitute-modal">
     <h2>
@@ -509,6 +564,8 @@
         type="text"
         placeholder="add new substitute"
         value={newSubstituteName}
+        minlength={1}
+        maxlength={256}
       />
       <IconButton
         onclick={onNewSubstituteClick}
@@ -525,22 +582,6 @@
 
       {#each selectedSubstituteItems as sub, i (sub.listKey)}
         <li class="list-item">
-          <input type="hidden" name={`subItemId${i}`} value={sub.id} />
-
-          <input
-            type="hidden"
-            name={`substituteFor${i}`}
-            value={mainItems.find(
-              (item) => item.listKey === sub.substituteForItemListKey,
-            )?.id}
-          />
-
-          <input
-            type="hidden"
-            name={`subItemListKey${i}`}
-            value={sub.listKey}
-          />
-
           <div class="list-item-attribute">
             <label for={`subName${i}`}> Name </label>
             <input
@@ -552,6 +593,8 @@
               type="text"
               oninput={(e) => onSubstituteNameChange(e, sub.listKey)}
               placeholder="name"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
@@ -579,6 +622,8 @@
               type="text"
               oninput={(e) => onSubstituteNotesChange(e, sub.listKey)}
               placeholder="notes"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
@@ -592,6 +637,8 @@
               type="text"
               oninput={(e) => onSubstituteLinkChange(e, sub.listKey)}
               placeholder="https://google.com"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
@@ -764,5 +811,16 @@
     .close-substitute {
       align-self: end;
     }
+  }
+
+  .error {
+    color: red;
+    font-size: 14px;
+  }
+
+  .title-section-error {
+    color: red;
+    font-size: 16px;
+    align-self: center;
   }
 </style>
