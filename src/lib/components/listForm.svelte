@@ -9,7 +9,7 @@
   import substituteSvg from "$lib/assets/substitute.svg";
   import { goto } from "$app/navigation";
   import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/lists/upsert/$types";
-  import { safeParseSubstituteListItem } from "$lib/services/validators";
+  import { safeParseUpsertGroceryListItem } from "$lib/validators/groceryList";
 
   type ListFormProps = {
     initialList: GroceryListFormData;
@@ -118,7 +118,7 @@
   }
 
   function onRemoveItem(itemListKey: string) {
-    // see comment above declaration of formErrorMap for why this is here
+    // todo see comment above declaration of formErrorMap for why this is here
     formErrorMap = new Map<string, string>();
 
     mainItems = mainItems.filter(({ listKey }) => itemListKey !== listKey);
@@ -174,7 +174,8 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].name = e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
+
+    // todo debounce submission
   }
 
   function onSubstituteQuantityChange(
@@ -187,7 +188,8 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].quantity = +e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
+
+    // todo debounce submission
   }
 
   function onSubstituteNotesChange(
@@ -200,7 +202,7 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].notes = e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onSubstituteLinkChange(
@@ -213,7 +215,7 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].link = e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onRemoveSubstitute(listKey: string) {
@@ -318,6 +320,7 @@
           break;
         case "failure":
           if (result.data && result.data.errorMap.size > 0) {
+            // todo if there is an error for hidden inputs handle that as a form error
             formErrorMap = result.data.errorMap;
           } else {
             formErrorMap = new Map<string, string>().set(
@@ -340,20 +343,15 @@
 
   function onCloseSubstituteModal() {
     let newErrorMap = new Map<string, string>();
-    selectedSubstituteItems.forEach(
-      ({ name, quantity, notes, link, listKey: errorMapSuffix }) => {
-        const listItemRes = safeParseSubstituteListItem({
-          name,
-          quantity,
-          notes,
-          link,
-          errorMapSuffix,
-        });
-        if (listItemRes.errorMap.size > 0) {
-          newErrorMap = new Map([...newErrorMap, ...listItemRes.errorMap]);
-        }
-      },
-    );
+    selectedSubstituteItems.forEach((item) => {
+      const listItemRes = safeParseUpsertGroceryListItem({
+        ...item,
+        errorMapSuffix: item.listKey,
+      });
+      if (listItemRes.errorMap.size > 0) {
+        newErrorMap = new Map([...newErrorMap, ...listItemRes.errorMap]);
+      }
+    });
 
     subFormErrorMap = newErrorMap;
     if (newErrorMap.size === 0) {
@@ -369,7 +367,6 @@
   use:enhance={submitFunction}
 >
   <input type="hidden" name="id" value={groceryList.id} />
-  <!--     todo is it worth adding error handling for the hidden inputs?     -->
 
   <div class="title-section">
     {#if !!formErrorMap.get("form")?.length}
@@ -443,7 +440,6 @@
 
   <div class="items-list">
     <input type="hidden" name="count" value={mainItems.length} />
-    <!--     todo is it worth adding error handling for the hidden inputs?     -->
 
     <ul class="items-ul">
       {#if !mainItems.length}
@@ -452,7 +448,6 @@
 
       {#each mainItems as item, i (item.listKey)}
         <li class="list-item">
-          <!--     todo is it worth adding error handling for the hidden inputs?     -->
           <input type="hidden" name={`itemId${i}`} value={mainItems[i].id} />
           <input type="hidden" name={`substituteFor${i}`} value={null} />
           <input type="hidden" name={`subForListKey${i}`} value={null} />
@@ -611,9 +606,9 @@
 
       {#each selectedSubstituteItems as sub, i (sub.listKey)}
         <li class="list-item">
-          {#if !!subFormErrorMap.get(`name${sub.listKey}`)?.length}
+          {#if !!subFormErrorMap.get(`Name${sub.listKey}`)?.length}
             <div class="error">
-              Name {subFormErrorMap.get(`name${sub.listKey}`)}
+              Name {subFormErrorMap.get(`Name${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
@@ -632,9 +627,9 @@
             />
           </div>
 
-          {#if !!subFormErrorMap.get(`quantity${sub.listKey}`)?.length}
+          {#if !!subFormErrorMap.get(`Quantity${sub.listKey}`)?.length}
             <div class="error">
-              Quantity {subFormErrorMap.get(`quantity${sub.listKey}`)}
+              Quantity {subFormErrorMap.get(`Quantity${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
@@ -651,9 +646,9 @@
             />
           </div>
 
-          {#if !!subFormErrorMap.get(`notes${sub.listKey}`)?.length}
+          {#if !!subFormErrorMap.get(`Notes${sub.listKey}`)?.length}
             <div class="error">
-              Notes {subFormErrorMap.get(`notes${sub.listKey}`)}
+              Notes {subFormErrorMap.get(`Notes${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
@@ -671,9 +666,9 @@
             />
           </div>
 
-          {#if !!subFormErrorMap.get(`link${sub.listKey}`)?.length}
+          {#if !!subFormErrorMap.get(`Link${sub.listKey}`)?.length}
             <div class="error">
-              Link {subFormErrorMap.get(`link${sub.listKey}`)}
+              Link {subFormErrorMap.get(`Link${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
