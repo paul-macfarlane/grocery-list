@@ -308,7 +308,10 @@
         index++;
       });
 
-      formData.set("count", `${mainItems.length + substituteItems.length}`);
+      formData.set(
+        "itemsCount",
+        `${mainItems.length + substituteItems.length}`,
+      );
     }
 
     return async ({ result }) => {
@@ -316,6 +319,7 @@
         case "success":
           formErrorMap = new Map<string, string>();
           void goto("/lists");
+
           break;
         case "failure":
           if (result.data && result.data.errorMap.size > 0) {
@@ -369,31 +373,31 @@
   <input type="hidden" name="id" value={groceryList.id} />
 
   <div class="title-section">
-    {#if !!formErrorMap.get("form")?.length}
-      <div class="title-section-error">{formErrorMap.get("form")}</div>
+    {#if !!formErrorMap.get("Form")?.length}
+      <div class="title-section-error">{formErrorMap.get("Form")}</div>
     {/if}
 
-    {#if !!formErrorMap.get("title")?.length}
-      <div class="title-section-error">Title {formErrorMap.get("title")}</div>
+    {#if !!formErrorMap.get("Title")?.length}
+      <div class="title-section-error">Title {formErrorMap.get("Title")}</div>
     {/if}
     <div class="title-section-item">
       <label for="title"> Title </label>
       <input
         id="title"
         class="title-section-input"
-        required
         name="title"
         type="text"
         value={groceryList.title}
         placeholder="Title"
         onchange={onTitleChange}
+        required
         minlength={1}
         maxlength={256}
       />
     </div>
 
-    {#if !!formErrorMap.get("budget")?.length}
-      <div class="title-section-error">Budget {formErrorMap.get("budget")}</div>
+    {#if !!formErrorMap.get("Budget")?.length}
+      <div class="title-section-error">Budget {formErrorMap.get("Budget")}</div>
     {/if}
     <div class="title-section-item">
       <label for="budget"> Budget </label>
@@ -405,8 +409,8 @@
         step="0.01"
         placeholder="0.00"
         value={groceryList.budget}
-        min="0.00"
         onchange={onBudgetChange}
+        min="0.00"
       />
     </div>
   </div>
@@ -439,7 +443,7 @@
   </div>
 
   <div class="items-list">
-    <input type="hidden" name="count" value={mainItems.length} />
+    <input type="hidden" name="itemsCount" value={mainItems.length} />
 
     <ul class="items-ul">
       {#if !mainItems.length}

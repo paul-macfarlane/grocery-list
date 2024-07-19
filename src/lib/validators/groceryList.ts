@@ -1,7 +1,202 @@
 import { z } from "zod";
-import type { UpsertGroceryListItem } from "$lib/types/groceryList";
+import type {
+  UpsertGroceryList,
+  UpsertGroceryListItem,
+} from "$lib/types/groceryList";
+import { validateAndTransformStrToNum } from "$lib/validators/common";
 
-type ParseListItemParam = {
+type ParseFormListResponse = {
+  data: UpsertGroceryList | null;
+  errorMap: Map<string, string>;
+};
+
+export function safeParseFormGroceryList(
+  formData: FormData,
+): ParseFormListResponse {
+  let errorMap = new Map<string, string>();
+  let data = null;
+
+  let itemCount = 0;
+  const itemsCountCheck = validateAndTransformStrToNum.safeParse(
+    formData.get("itemsCount"),
+  );
+  if (itemsCountCheck.success) {
+    itemCount = itemsCountCheck.data;
+  } else {
+    errorMap.set(
+      "ItemsCount",
+      itemsCountCheck.error.errors.map((err) => err.message).join(","),
+    );
+
+    return {
+      data,
+      errorMap,
+    };
+  }
+
+  const items = [];
+  const nonEmptyStringOrNull = (str: string): string | null => {
+    return str !== "" ? str : null;
+  };
+  for (let i = 0; i < itemCount; i++) {
+    const unvalidatedListKey = nonEmptyStringOrNull(
+      formData.get(`itemListKey${i}`)?.toString().trim() ?? "",
+    );
+
+    items.push({
+      id: formData.get(`itemId${unvalidatedListKey}`)
+        ? parseInt(
+            formData.get(`itemId${unvalidatedListKey}`)?.toString() ?? "",
+          )
+        : null,
+      name: formData.get(`itemName${unvalidatedListKey}`)?.toString().trim(),
+      quantity: formData.get(`itemQuantity${unvalidatedListKey}`)
+        ? parseInt(
+            formData.get(`itemQuantity${unvalidatedListKey}`)?.toString() ?? "",
+          )
+        : null,
+      notes: nonEmptyStringOrNull(
+        formData.get(`itemNotes${unvalidatedListKey}`)?.toString() ?? "",
+      ),
+      link: nonEmptyStringOrNull(
+        formData.get(`itemLink${unvalidatedListKey}`)?.toString().trim() ?? "",
+      ),
+      groupName: nonEmptyStringOrNull(
+        formData.get(`itemGroupName${unvalidatedListKey}`)?.toString().trim() ??
+          "",
+      ),
+      substituteForItemId: formData.get(
+        `itemSubstituteForItemId${unvalidatedListKey}`,
+      )
+        ? parseInt(
+            formData
+              .get(`itemSubstituteForItemId${unvalidatedListKey}`)
+              ?.toString()
+              .trim() ?? "",
+          )
+        : null,
+      listKey: formData.get(`itemListKey${i}`)?.toString().trim(),
+      substituteForItemListKey: nonEmptyStringOrNull(
+        formData
+          .get(`itemSubstituteForItemListKey${unvalidatedListKey}`)
+          ?.toString()
+          .trim() ?? "",
+      ),
+      errorMapPrefix: "item",
+      errorMapSuffix: unvalidatedListKey ?? "",
+    });
+  }
+
+  const listRes = safeParseUpsertGroceryList({
+    id: formData.get("id")
+      ? parseInt(formData.get("id")?.toString() ?? "")
+      : null,
+    title: formData.get("title"),
+    budget: formData.get("budget")
+      ? parseFloat(formData.get("budget")?.toString() ?? "")
+      : null,
+    items,
+  });
+  if (listRes.errorMap.size === 0) {
+    data = listRes.data!;
+  } else {
+    errorMap = new Map([...errorMap, ...listRes.errorMap]);
+  }
+
+  return {
+    data,
+    errorMap,
+  };
+}
+
+type ParseListParams = {
+  id: unknown;
+  title: unknown;
+  budget: unknown;
+  items: ParseListItemParams[];
+};
+
+type ParseListResponse = {
+  data: UpsertGroceryList | null;
+  errorMap: Map<string, string>;
+};
+
+export function safeParseUpsertGroceryList(
+  params: ParseListParams,
+): ParseListResponse {
+  let errorMap = new Map<string, string>();
+
+  let id: number | null = null;
+  const idCheck = z
+    .number({ message: "must be a number" })
+    .nullable()
+    .safeParse(params.id);
+  if (idCheck.success) {
+    id = idCheck.data;
+  } else {
+    errorMap.set(
+      `Id`,
+      idCheck.error.errors.map((err) => err.message).join(","),
+    );
+  }
+
+  let title = "";
+  const titleCheck = z
+    .string({ message: "must be a string" })
+    .min(1, "is required")
+    .max(256, "cannot be > 256 characters")
+    .safeParse(params.title);
+  if (titleCheck.success) {
+    title = titleCheck.data;
+  } else {
+    errorMap.set(
+      `Title`,
+      titleCheck.error.errors.map((err) => err.message).join(","),
+    );
+  }
+
+  let budget: number | null = null;
+  const budgetCheck = z
+    .number({ message: "must be a number" })
+    .min(0, "if set must be >= 0")
+    .nullable()
+    .safeParse(params.budget);
+  if (budgetCheck.success) {
+    budget = budgetCheck.data;
+  } else {
+    errorMap.set(
+      `Budget`,
+      budgetCheck.error.errors.map((err) => err.message).join(","),
+    );
+  }
+
+  const items: UpsertGroceryListItem[] = [];
+  params.items.forEach((item) => {
+    const res = safeParseUpsertGroceryListItem(item);
+    if (res.errorMap.size > 0) {
+      errorMap = new Map([...errorMap, ...res.errorMap]);
+    } else {
+      items.push(res.data!);
+    }
+  });
+
+  let data = null;
+  if (errorMap.size === 0) {
+    data = {
+      id,
+      title,
+      budget,
+      items,
+    };
+  }
+
+  return {
+    data,
+    errorMap,
+  };
+}
+
+type ParseListItemParams = {
   id: unknown;
   name: unknown;
   quantity: unknown;
@@ -22,22 +217,22 @@ type ParseListItemResponse = {
 };
 
 export function safeParseUpsertGroceryListItem(
-  param: ParseListItemParam,
+  params: ParseListItemParams,
 ): ParseListItemResponse {
-  param.errorMapPrefix = param.errorMapPrefix ?? "";
-  param.errorMapSuffix = param.errorMapSuffix ?? "";
+  params.errorMapPrefix = params.errorMapPrefix ?? "item";
+  params.errorMapSuffix = params.errorMapSuffix ?? "";
   const errorMap = new Map<string, string>();
 
   let id: number | null = null;
   const idCheck = z
     .number({ message: "must be a number" })
     .nullable()
-    .safeParse(param.id);
+    .safeParse(params.id);
   if (idCheck.success) {
     id = idCheck.data;
   } else {
     errorMap.set(
-      `${param.errorMapPrefix}Id${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}Id${params.errorMapSuffix}`,
       idCheck.error.errors.map((err) => err.message).join(","),
     );
   }
@@ -47,10 +242,10 @@ export function safeParseUpsertGroceryListItem(
     .string({ message: "must be a string" })
     .min(1, "is required")
     .max(256, "cannot be > 256 characters")
-    .safeParse(param.name);
+    .safeParse(params.name);
   if (!nameCheck.success) {
     errorMap.set(
-      `${param.errorMapPrefix}Name${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}Name${params.errorMapSuffix}`,
       nameCheck.error.errors.map((err) => err.message).join(","),
     );
   } else {
@@ -63,10 +258,10 @@ export function safeParseUpsertGroceryListItem(
     .min(1, "if set must be > 0")
     .max(1000000, "if set must be <= 1,000,000")
     .nullable()
-    .safeParse(param.quantity);
+    .safeParse(params.quantity);
   if (!quantityCheck.success) {
     errorMap.set(
-      `${param.errorMapPrefix}Quantity${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}Quantity${params.errorMapSuffix}`,
       quantityCheck.error.errors.map((err) => err.message).join(","),
     );
   } else {
@@ -79,10 +274,10 @@ export function safeParseUpsertGroceryListItem(
     .min(1, "if set cannot be empty")
     .max(256, "if set cannot be > 256 characters")
     .nullable()
-    .safeParse(param.notes);
+    .safeParse(params.notes);
   if (!noteCheck.success) {
     errorMap.set(
-      `${param.errorMapPrefix}Notes${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}Notes${params.errorMapSuffix}`,
       noteCheck.error.errors.map((err) => err.message).join(","),
     );
   } else {
@@ -95,10 +290,10 @@ export function safeParseUpsertGroceryListItem(
     .min(1, "if set cannot be empty")
     .max(256, "if set cannot be > 256 characters")
     .nullable()
-    .safeParse(param.link);
+    .safeParse(params.link);
   if (!linkCheck.success) {
     errorMap.set(
-      `${param.errorMapPrefix}Link${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}Link${params.errorMapSuffix}`,
       linkCheck.error.errors.map((err) => err.message).join(","),
     );
   } else {
@@ -111,12 +306,12 @@ export function safeParseUpsertGroceryListItem(
     .min(1, "if set cannot be empty")
     .max(256, "if set cannot be > 256 characters")
     .nullable()
-    .safeParse(param.groupName);
+    .safeParse(params.groupName);
   if (groupNameCheck.success) {
     groupName = groupNameCheck.data;
   } else {
     errorMap.set(
-      `${param.errorMapPrefix}GroupName${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}GroupName${params.errorMapSuffix}`,
       groupNameCheck.error.errors.map((err) => err.message).join(","),
     );
   }
@@ -125,12 +320,12 @@ export function safeParseUpsertGroceryListItem(
   const substituteForItemIdCheck = z
     .number({ message: "must be a number" })
     .nullable()
-    .safeParse(param.substituteForItemId);
+    .safeParse(params.substituteForItemId);
   if (substituteForItemIdCheck.success) {
     substituteForItemId = substituteForItemIdCheck.data;
   } else {
     errorMap.set(
-      `${param.errorMapPrefix}SubstituteForItemId${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}SubstituteForItemId${params.errorMapSuffix}`,
       substituteForItemIdCheck.error.errors.map((err) => err.message).join(","),
     );
   }
@@ -139,12 +334,12 @@ export function safeParseUpsertGroceryListItem(
   const listKeyCheck = z
     .string({ message: "must be a string" })
     .min(1, "must be at least 1 character")
-    .safeParse(param.listKey);
+    .safeParse(params.listKey);
   if (listKeyCheck.success) {
     listKey = listKeyCheck.data;
   } else {
     errorMap.set(
-      `${param.errorMapPrefix}ListKey${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}ListKey${params.errorMapSuffix}`,
       listKeyCheck.error.errors.map((err) => err.message).join(","),
     );
   }
@@ -154,12 +349,12 @@ export function safeParseUpsertGroceryListItem(
     .string({ message: "must be a string" })
     .min(1, "must be at least 1 character")
     .nullable()
-    .safeParse(param.substituteForItemListKey);
+    .safeParse(params.substituteForItemListKey);
   if (substituteForItemListKeyCheck.success) {
     substituteForItemListKey = substituteForItemListKeyCheck.data;
   } else {
     errorMap.set(
-      `${param.errorMapPrefix}SubstituteForItemListKey${param.errorMapSuffix}`,
+      `${params.errorMapPrefix}SubstituteForItemListKey${params.errorMapSuffix}`,
       substituteForItemListKeyCheck.error.errors
         .map((err) => err.message)
         .join(","),
