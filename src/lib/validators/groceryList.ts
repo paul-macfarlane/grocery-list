@@ -154,7 +154,7 @@ export function safeParseUpsertGroceryListItem(
     .string({ message: "must be a string" })
     .min(1, "must be at least 1 character")
     .nullable()
-    .safeParse(param.listKey);
+    .safeParse(param.substituteForItemListKey);
   if (substituteForItemListKeyCheck.success) {
     substituteForItemListKey = substituteForItemListKeyCheck.data;
   } else {

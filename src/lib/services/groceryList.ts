@@ -14,6 +14,7 @@ import type {
 import { and, count, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import { validateAndTransformStrToNum } from "$lib/services/validators";
 import { ApplicationError, NotFoundError } from "$lib/types/errors";
+import { safeParseUpsertGroceryListItem } from "$lib/validators/groceryList";
 
 type ParseGroceryListFromFormRes = {
   data: UpsertGroceryList;
@@ -109,211 +110,66 @@ export function parseGroceryListFromFormData(
     );
   }
 
+  const nonEmptyStringOrNull = (str: string): string | null => {
+    return str !== "" ? str : null;
+  };
+
   for (let i = 0; i < count; i++) {
-    const itemIdCheck = z
-      .string({ message: "must exist as an input" })
-      .refine(
-        (val) =>
-          val === "" ||
-          (!isNaN(parseInt(val, 10)) && parseInt(val, 10).toString() === val),
-        {
-          message: "must be a number",
-        },
+    const unvalidatedListKey = nonEmptyStringOrNull(
+      formData.get(`itemListKey${i}`)?.toString().trim() ?? "",
+    );
+
+    const checkParam = {
+      id: formData.get(`itemId${unvalidatedListKey}`)
+        ? parseInt(
+            formData.get(`itemId${unvalidatedListKey}`)?.toString() ?? "",
+          )
+        : null,
+      name: formData.get(`itemName${unvalidatedListKey}`)?.toString().trim(),
+      quantity: formData.get(`itemQuantity${unvalidatedListKey}`)
+        ? parseInt(
+            formData.get(`itemQuantity${unvalidatedListKey}`)?.toString() ?? "",
+          )
+        : null,
+      notes: nonEmptyStringOrNull(
+        formData.get(`itemNotes${unvalidatedListKey}`)?.toString() ?? "",
+      ),
+      link: nonEmptyStringOrNull(
+        formData.get(`itemLink${unvalidatedListKey}`)?.toString().trim() ?? "",
+      ),
+      groupName: nonEmptyStringOrNull(
+        formData.get(`itemGroupName${unvalidatedListKey}`)?.toString().trim() ??
+          "",
+      ),
+      substituteForItemId: formData.get(
+        `itemSubstituteForItemId${unvalidatedListKey}`,
       )
-      .transform((val) => {
-        if (val === null || val === "") {
-          return null;
-        }
-
-        return parseInt(val, 10);
-      })
-      .safeParse(formData.get(`itemId${i}`)?.toString().trim());
-    let itemId: number | null = null;
-    if (itemIdCheck.success) {
-      itemId = itemIdCheck.data;
+        ? parseInt(
+            formData
+              .get(`itemSubstituteForItemId${unvalidatedListKey}`)
+              ?.toString()
+              .trim() ?? "",
+          )
+        : null,
+      listKey: formData.get(`itemListKey${i}`)?.toString().trim(),
+      substituteForItemListKey: nonEmptyStringOrNull(
+        formData
+          .get(`itemSubstituteForItemListKey${unvalidatedListKey}`)
+          ?.toString()
+          .trim() ?? "",
+      ),
+      errorMapPrefix: "item",
+      errorMapSuffix: unvalidatedListKey ?? "",
+    };
+    const itemCheck = safeParseUpsertGroceryListItem(checkParam);
+    if (itemCheck.errorMap.size) {
+      response.errorMap = new Map([
+        ...response.errorMap,
+        ...itemCheck.errorMap,
+      ]);
     } else {
-      response.errorMap.set(
-        `itemId${i}`,
-        itemIdCheck.error.errors.map((err) => err.message).join(","),
-      );
+      response.data.items.push(itemCheck.data!);
     }
-
-    const nameCheck = z
-      .string({ message: "must exist as an input" })
-      .min(1, "is required")
-      .max(256, "cannot be > 256 characters")
-      .safeParse(formData.get(`name${i}`)?.toString().trim());
-    let name = "";
-    if (nameCheck.success) {
-      name = nameCheck.data;
-    } else {
-      response.errorMap.set(
-        `name${i}`,
-        nameCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    const quantityCheck = z
-      .string({ message: "must exist as an input" })
-      .refine(
-        (val) =>
-          val === "" ||
-          (!isNaN(parseInt(val, 10)) &&
-            parseInt(val, 10).toString() === val &&
-            parseInt(val, 10) > 0),
-        {
-          message: "must be > 0",
-        },
-      )
-      .transform((val) => {
-        if (val === null || val === "") {
-          return null;
-        }
-
-        return parseInt(val, 10);
-      })
-      .safeParse(formData.get(`quantity${i}`)?.toString().trim());
-    let quantity: number | null = null;
-    if (quantityCheck.success) {
-      quantity = quantityCheck.data;
-    } else {
-      response.errorMap.set(
-        `quantity${i}`,
-        quantityCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    const notesCheck = z
-      .string({ message: "must be set" })
-      .max(256, "cannot be > 256 characters")
-      .transform((val) => {
-        if (val === "") {
-          return null;
-        }
-
-        return val;
-      })
-      .safeParse(formData.get(`notes${i}`)?.toString().trim());
-    let notes: string | null = null;
-    if (notesCheck.success) {
-      notes = notesCheck.data;
-    } else {
-      response.errorMap.set(
-        `notes${i}`,
-        notesCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    const linkCheck = z
-      .string({ message: "must be set" })
-      .max(256, "cannot be > 256 characters")
-      .transform((val) => {
-        if (val === "") {
-          return null;
-        }
-
-        return val;
-      })
-      .safeParse(formData.get(`link${i}`)?.toString().trim());
-    let link: string | null = null;
-    if (linkCheck.success) {
-      link = linkCheck.data;
-    } else {
-      response.errorMap.set(
-        `link${i}`,
-        linkCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    const groupNameCheck = z
-      .string({ message: "must be set" })
-      .max(256, "cannot be > 256 characters")
-      .transform((val) => {
-        if (val === "") {
-          return null;
-        }
-
-        return val;
-      })
-      .safeParse(formData.get(`groupName${i}`)?.toString().trim());
-    let groupName: string | null = null;
-    if (groupNameCheck.success) {
-      groupName = groupNameCheck.data;
-    } else {
-      response.errorMap.set(
-        `groupName${i}`,
-        groupNameCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    let listKey = "";
-    const listKeyCheck = z
-      .string({ message: "must exist as an input" })
-      .safeParse(formData.get(`itemListKey${i}`)?.toString().trim());
-    if (listKeyCheck.success) {
-      listKey = listKeyCheck.data;
-    } else {
-      response.errorMap.set(
-        `itemListKey${i}`,
-        listKeyCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    let substituteForItemId: number | null = null;
-    const substituteCheck = z
-      .string({ message: "must exist as an input" })
-      .refine(
-        (val) =>
-          val === "" ||
-          (!isNaN(parseInt(val, 10)) &&
-            parseInt(val, 10).toString() === val &&
-            parseInt(val, 10) > 0),
-        {
-          message: "must be > 0",
-        },
-      )
-      .transform((val) => {
-        if (val === null || val === "") {
-          return null;
-        }
-
-        return parseInt(val, 10);
-      })
-      .safeParse(formData.get(`substituteFor${i}`)?.toString().trim());
-    if (substituteCheck.success) {
-      substituteForItemId = substituteCheck.data;
-    } else {
-      response.errorMap.set(
-        `substituteFor${i}`,
-        substituteCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    let substituteForItemListKey: string | null = null;
-    const subForListKeyCheck = z
-      .string({ message: "must exist as an input" })
-      .nullable()
-      .safeParse(formData.get(`subForListKey${i}`)?.toString().trim());
-    if (subForListKeyCheck.success) {
-      substituteForItemListKey = subForListKeyCheck.data;
-    } else {
-      response.errorMap.set(
-        `subForListKey${i}`,
-        subForListKeyCheck.error.errors.map((err) => err.message).join(","),
-      );
-    }
-
-    response.data.items.push({
-      id: itemId,
-      name,
-      quantity,
-      notes,
-      link,
-      groupName,
-      listKey,
-      substituteForItemId,
-      substituteForItemListKey,
-    });
   }
 
   return response;

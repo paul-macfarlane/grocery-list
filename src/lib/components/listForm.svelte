@@ -33,8 +33,6 @@
   let groupUserIsTyping = $state("");
   let substituteItemListKey = $state("");
   let newSubstituteName = $state("");
-  // todo formErrorMap is bugged right now because the key is an array index but it needs ot be listKey so that when user removes item previous error persists
-  // that, or clear error map when item is removed, which is easier but hacky
   let formErrorMap = $state(new Map<string, string>());
   let subFormErrorMap = $state(new Map<string, string>());
 
@@ -118,20 +116,16 @@
   }
 
   function onRemoveItem(itemListKey: string) {
-    // todo see comment above declaration of formErrorMap for why this is here
-    formErrorMap = new Map<string, string>();
-
     mainItems = mainItems.filter(({ listKey }) => itemListKey !== listKey);
     substituteItems = substituteItems.filter(
       (sub) => sub.substituteForItemListKey !== itemListKey,
     );
-
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onItemNameChange(e: { currentTarget: HTMLInputElement }, i: number) {
     mainItems[i].name = e.currentTarget.value;
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onItemQuantityChange(
@@ -139,7 +133,7 @@
     i: number,
   ) {
     mainItems[i].quantity = +e.currentTarget.value;
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onItemNotesChange(
@@ -147,12 +141,12 @@
     i: number,
   ) {
     mainItems[i].notes = e.currentTarget.value;
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onItemLinkChange(e: { currentTarget: HTMLInputElement }, i: number) {
     mainItems[i].link = e.currentTarget.value;
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onItemGroupChange(
@@ -161,7 +155,7 @@
   ) {
     groupUserIsTyping = e.currentTarget.value;
     mainItems[i].groupName = e.currentTarget.value;
-    // todo debounce submission, maybe validation
+    // todo debounce submission
   }
 
   function onSubstituteNameChange(
@@ -174,7 +168,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].name = e.currentTarget.value;
     }
-
     // todo debounce submission
   }
 
@@ -188,7 +181,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].quantity = +e.currentTarget.value;
     }
-
     // todo debounce submission
   }
 
@@ -220,6 +212,7 @@
 
   function onRemoveSubstitute(listKey: string) {
     substituteItems = substituteItems.filter((sub) => sub.listKey !== listKey);
+    // todo debounce submission
   }
 
   function onNewSubstituteKeyDown(e: {
@@ -291,21 +284,27 @@
           (item) => item.listKey === sub.substituteForItemListKey,
         );
 
-        formData.set(`itemId${index}`, sub.id?.toString() ?? "");
+        formData.set(`itemId${sub.listKey}`, sub.id?.toString() ?? "");
         formData.set(
-          `substituteFor${index}`,
+          `itemSubstituteForItemId${sub.listKey}`,
           itemSubbedFor?.id?.toString() ?? "",
         );
         formData.set(
-          `subForListKey${index}`,
+          `itemSubstituteForItemListKey${sub.listKey}`,
           sub.substituteForItemListKey ?? "",
         );
         formData.set(`itemListKey${index}`, sub.listKey);
-        formData.set(`name${index}`, sub.name);
-        formData.set(`quantity${index}`, sub.quantity?.toString() ?? "");
-        formData.set(`notes${index}`, sub.notes ?? "");
-        formData.set(`link${index}`, sub.link ?? "");
-        formData.set(`groupName${index}`, itemSubbedFor?.groupName ?? "");
+        formData.set(`itemName${sub.listKey}`, sub.name);
+        formData.set(
+          `itemQuantity${sub.listKey}`,
+          sub.quantity?.toString() ?? "",
+        );
+        formData.set(`itemNotes${sub.listKey}`, sub.notes ?? "");
+        formData.set(`itemLink${sub.listKey}`, sub.link ?? "");
+        formData.set(
+          `itemGroupName${sub.listKey}`,
+          itemSubbedFor?.groupName ?? "",
+        );
         index++;
       });
 
@@ -321,6 +320,7 @@
         case "failure":
           if (result.data && result.data.errorMap.size > 0) {
             // todo if there is an error for hidden inputs handle that as a form error
+            // todo technically this is not handling server validation errors for substitutes, which might be okay since we validate substitutes client side when the modal is attempted to be closed
             formErrorMap = result.data.errorMap;
           } else {
             formErrorMap = new Map<string, string>().set(
@@ -448,40 +448,56 @@
 
       {#each mainItems as item, i (item.listKey)}
         <li class="list-item">
-          <input type="hidden" name={`itemId${i}`} value={mainItems[i].id} />
-          <input type="hidden" name={`substituteFor${i}`} value={null} />
-          <input type="hidden" name={`subForListKey${i}`} value={null} />
+          <input
+            type="hidden"
+            name={`itemId${item.listKey}`}
+            value={mainItems[i].id}
+          />
+          <input
+            type="hidden"
+            name={`itemSubstituteForItemId${item.listKey}`}
+            value={null}
+          />
+          <input
+            type="hidden"
+            name={`itemSubstituteForItemListKey${item.listKey}`}
+            value={null}
+          />
           <input type="hidden" name={`itemListKey${i}`} value={item.listKey} />
 
-          {#if !!formErrorMap.get(`name${i}`)?.length}
-            <div class="error">Name {formErrorMap.get(`name${i}`)}</div>
+          {#if !!formErrorMap.get(`itemName${item.listKey}`)?.length}
+            <div class="error">
+              Name {formErrorMap.get(`itemName${item.listKey}`)}
+            </div>
           {/if}
           <div class="list-item-attribute">
-            <label for={`name${i}`}> Name </label>
+            <label for={`itemName${item.listKey}`}> Name </label>
             <input
-              id={`name${i}`}
+              id={`itemName${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].name}
-              required
-              name={`name${i}`}
+              name={`itemName${item.listKey}`}
               type="text"
               oninput={(e) => onItemNameChange(e, i)}
               placeholder="name"
+              required
               minlength={1}
               maxlength={256}
             />
           </div>
 
-          {#if !!formErrorMap.get(`quantity${i}`)?.length}
-            <div class="error">Quantity {formErrorMap.get(`quantity${i}`)}</div>
+          {#if !!formErrorMap.get(`itemQuantity${item.listKey}`)?.length}
+            <div class="error">
+              Quantity {formErrorMap.get(`itemQuantity${item.listKey}`)}
+            </div>
           {/if}
           <div class="list-item-attribute">
-            <label for={`quantity${i}`}> Quantity </label>
+            <label for={`itemQuantity${item.listKey}`}> Quantity </label>
             <input
-              id={`quantity${i}`}
+              id={`itemQuantity${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].quantity}
-              name={`quantity${i}`}
+              name={`itemQuantity${item.listKey}`}
               type="number"
               min={1}
               oninput={(e) => onItemQuantityChange(e, i)}
@@ -489,16 +505,18 @@
             />
           </div>
 
-          {#if !!formErrorMap.get(`notes${i}`)?.length}
-            <div class="error">Notes {formErrorMap.get(`notes${i}`)}</div>
+          {#if !!formErrorMap.get(`itemNotes${item.listKey}`)?.length}
+            <div class="error">
+              Notes {formErrorMap.get(`itemNotes${item.listKey}`)}
+            </div>
           {/if}
           <div class="list-item-attribute">
-            <label for={`notes${i}`}> Notes </label>
+            <label for={`itemNotes${item.listKey}`}> Notes </label>
             <input
-              id={`notes${i}`}
+              id={`itemNotes${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].notes}
-              name={`notes${i}`}
+              name={`itemNotes${item.listKey}`}
               type="text"
               oninput={(e) => onItemNotesChange(e, i)}
               placeholder="notes"
@@ -507,16 +525,18 @@
             />
           </div>
 
-          {#if !!formErrorMap.get(`link${i}`)?.length}
-            <div class="error">Link {formErrorMap.get(`link${i}`)}</div>
+          {#if !!formErrorMap.get(`itemLink${item.listKey}`)?.length}
+            <div class="error">
+              Link {formErrorMap.get(`itemLink${item.listKey}`)}
+            </div>
           {/if}
           <div class="list-item-attribute">
-            <label for={`link${i}`}> Link </label>
+            <label for={`itemLink${item.listKey}`}> Link </label>
             <input
-              id={`link${i}`}
+              id={`itemLink${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].link}
-              name={`link${i}`}
+              name={`itemLink${item.listKey}`}
               type="text"
               oninput={(e) => onItemLinkChange(e, i)}
               placeholder="https://google.com"
@@ -525,16 +545,18 @@
             />
           </div>
 
-          {#if !!formErrorMap.get(`groupName${i}`)?.length}
-            <div class="error">Group {formErrorMap.get(`groupName${i}`)}</div>
+          {#if !!formErrorMap.get(`itemGroupName${item.listKey}`)?.length}
+            <div class="error">
+              Group {formErrorMap.get(`itemGroupName${item.listKey}`)}
+            </div>
           {/if}
           <div class="list-item-attribute">
-            <label for={`groupInput${i}`}> Group </label>
+            <label for={`itemGroupInput${item.listKey}`}> Group </label>
             <input
-              id={`groupInput${i}`}
+              id={`itemGroupInput${item.listKey}`}
               class="list-item-input"
-              list={`groupList${i}`}
-              name={`groupName${i}`}
+              list={`itemGroupList${item.listKey}`}
+              name={`itemGroupName${item.listKey}`}
               value={item.groupName}
               placeholder="group"
               oninput={(e) => onItemGroupChange(e, i)}
@@ -545,7 +567,7 @@
               maxlength={256}
             />
 
-            <datalist id={`groupList${i}`}>
+            <datalist id={`itemGroupList${item.listKey}`}>
               {#each selectedListGroups as group (group)}
                 <option value={group}> </option>
               {/each}
