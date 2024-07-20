@@ -34,7 +34,6 @@
   let substituteItemListKey = $state("");
   let newSubstituteName = $state("");
   let formErrorMap = $state(new Map<string, string>());
-  let subFormErrorMap = $state(new Map<string, string>());
 
   let selectedListGroups = $derived.by(() => {
     const uniqueGroupNames = new Set<string>();
@@ -62,7 +61,7 @@
   );
 
   let form: HTMLFormElement; // todo can use this to programmatically submit via form.requestSubmit() when debouncing
-  // todo it is kinda annoying how hitting enter submits (even though that is technically how forms are supposed to work)
+  // todo it is also kinda annoying how hitting enter submits (even though that is technically how forms are supposed to work)
   // user might not expect that, think about how ot prevent this form-wide but also allow upsert button to work
   // easiest way to fix this is just trigger an api call when the upsert button is hit,
   // only downside there is that I'll have to rewrite the backend validation to take in json
@@ -107,12 +106,10 @@
 
   function onTitleChange(e: { currentTarget: HTMLInputElement }) {
     groceryList.title = e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onBudgetChange(e: { currentTarget: HTMLInputElement }) {
     groceryList.budget = parseFloat(e.currentTarget.value);
-    // todo debounce submission, maybe validation
   }
 
   function onRemoveItem(itemListKey: string) {
@@ -120,12 +117,10 @@
     substituteItems = substituteItems.filter(
       (sub) => sub.substituteForItemListKey !== itemListKey,
     );
-    // todo debounce submission
   }
 
   function onItemNameChange(e: { currentTarget: HTMLInputElement }, i: number) {
     mainItems[i].name = e.currentTarget.value;
-    // todo debounce submission
   }
 
   function onItemQuantityChange(
@@ -133,7 +128,6 @@
     i: number,
   ) {
     mainItems[i].quantity = +e.currentTarget.value;
-    // todo debounce submission
   }
 
   function onItemNotesChange(
@@ -141,12 +135,10 @@
     i: number,
   ) {
     mainItems[i].notes = e.currentTarget.value;
-    // todo debounce submission
   }
 
   function onItemLinkChange(e: { currentTarget: HTMLInputElement }, i: number) {
     mainItems[i].link = e.currentTarget.value;
-    // todo debounce submission
   }
 
   function onItemGroupChange(
@@ -155,7 +147,6 @@
   ) {
     groupUserIsTyping = e.currentTarget.value;
     mainItems[i].groupName = e.currentTarget.value;
-    // todo debounce submission
   }
 
   function onSubstituteNameChange(
@@ -168,7 +159,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].name = e.currentTarget.value;
     }
-    // todo debounce submission
   }
 
   function onSubstituteQuantityChange(
@@ -181,7 +171,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].quantity = +e.currentTarget.value;
     }
-    // todo debounce submission
   }
 
   function onSubstituteNotesChange(
@@ -194,7 +183,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].notes = e.currentTarget.value;
     }
-    // todo debounce submission
   }
 
   function onSubstituteLinkChange(
@@ -207,12 +195,10 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].link = e.currentTarget.value;
     }
-    // todo debounce submission
   }
 
   function onRemoveSubstitute(listKey: string) {
     substituteItems = substituteItems.filter((sub) => sub.listKey !== listKey);
-    // todo debounce submission
   }
 
   function onNewSubstituteKeyDown(e: {
@@ -323,9 +309,19 @@
           break;
         case "failure":
           if (result.data && result.data.errorMap.size > 0) {
-            // todo if there is an error for hidden inputs handle that as a form error
-            // todo technically this is not handling server validation errors for substitutes, which might be okay since we validate substitutes client side when the modal is attempted to be closed
             formErrorMap = result.data.errorMap;
+
+            substituteItems.forEach((sub) => {
+              for (let key of formErrorMap.keys()) {
+                if (key.includes(sub.listKey)) {
+                  formErrorMap.set(
+                    `sub${sub.substituteForItemListKey}`,
+                    "Check substitute(s) for errors",
+                  );
+                  break;
+                }
+              }
+            });
           } else {
             formErrorMap = new Map<string, string>().set(
               "form",
@@ -350,6 +346,9 @@
     selectedSubstituteItems.forEach((item) => {
       const listItemRes = safeParseUpsertGroceryListItem({
         ...item,
+        notes: item.notes?.length ? item.notes : null,
+        link: item.link?.length ? item.link : null,
+        errorMapPrefix: "item",
         errorMapSuffix: item.listKey,
       });
       if (listItemRes.errorMap.size > 0) {
@@ -357,7 +356,7 @@
       }
     });
 
-    subFormErrorMap = newErrorMap;
+    formErrorMap = newErrorMap;
     if (newErrorMap.size === 0) {
       substituteItemListKey = "";
     }
@@ -373,6 +372,10 @@
   <input type="hidden" name="id" value={groceryList.id} />
 
   <div class="title-section">
+    {#if !!formErrorMap.get("ItemsCount")?.length || !!formErrorMap.get("ItemsCount")?.length}
+      <div class="title-section-error">An unexpected error occurred</div>
+    {/if}
+
     {#if !!formErrorMap.get("Form")?.length}
       <div class="title-section-error">{formErrorMap.get("Form")}</div>
     {/if}
@@ -468,6 +471,14 @@
             value={null}
           />
           <input type="hidden" name={`itemListKey${i}`} value={item.listKey} />
+
+          {#if !!formErrorMap.get(`itemId${item.listKey}`)?.length || formErrorMap.get(`itemSubstituteForItemId${item.listKey}`)?.length || formErrorMap.get(`itemSubstituteForItemListKey${item.listKey}`)?.length || formErrorMap.get(`itemListKey${item.listKey}`)?.length}
+            <div class="error">An unexpected error occurred</div>
+          {/if}
+
+          {#if !!formErrorMap.get(`sub${item.listKey}`)?.length}
+            <div class="error">{formErrorMap.get(`sub${item.listKey}`)}</div>
+          {/if}
 
           {#if !!formErrorMap.get(`itemName${item.listKey}`)?.length}
             <div class="error">
@@ -632,9 +643,9 @@
 
       {#each selectedSubstituteItems as sub, i (sub.listKey)}
         <li class="list-item">
-          {#if !!subFormErrorMap.get(`Name${sub.listKey}`)?.length}
+          {#if !!formErrorMap.get(`itemName${sub.listKey}`)?.length}
             <div class="error">
-              Name {subFormErrorMap.get(`Name${sub.listKey}`)}
+              Name {formErrorMap.get(`itemName${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
@@ -653,9 +664,9 @@
             />
           </div>
 
-          {#if !!subFormErrorMap.get(`Quantity${sub.listKey}`)?.length}
+          {#if !!formErrorMap.get(`itemQuantity${sub.listKey}`)?.length}
             <div class="error">
-              Quantity {subFormErrorMap.get(`Quantity${sub.listKey}`)}
+              Quantity {formErrorMap.get(`itemQuantity${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
@@ -672,9 +683,9 @@
             />
           </div>
 
-          {#if !!subFormErrorMap.get(`Notes${sub.listKey}`)?.length}
+          {#if !!formErrorMap.get(`itemNotes${sub.listKey}`)?.length}
             <div class="error">
-              Notes {subFormErrorMap.get(`Notes${sub.listKey}`)}
+              Notes {formErrorMap.get(`itemNotes${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
@@ -692,9 +703,9 @@
             />
           </div>
 
-          {#if !!subFormErrorMap.get(`Link${sub.listKey}`)?.length}
+          {#if !!formErrorMap.get(`itemLink${sub.listKey}`)?.length}
             <div class="error">
-              Link {subFormErrorMap.get(`Link${sub.listKey}`)}
+              Link {formErrorMap.get(`itemLink${sub.listKey}`)}
             </div>
           {/if}
           <div class="list-item-attribute">
