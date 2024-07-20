@@ -1,7 +1,6 @@
 import type { Actions } from "./$types";
 import { getUserForSessionOrRedirect } from "$lib/services/users";
 import { fail, redirect } from "@sveltejs/kit";
-import { validateAndTransformStrToNum } from "$lib/services/validators";
 import {
   deleteGroceryList,
   duplicateGroceryList,
@@ -10,6 +9,7 @@ import {
 import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { ApplicationError } from "$lib/types/errors";
+import { validateAndTransformStrToNum } from "$lib/validators/common";
 
 export const load: PageServerLoad = async ({ cookies, params }) => {
   const user = await getUserForSessionOrRedirect(cookies);

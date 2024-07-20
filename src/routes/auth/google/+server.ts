@@ -2,7 +2,7 @@ import { redirect } from "@sveltejs/kit";
 import { GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_UI } from "$env/static/private";
 import type { RequestHandler } from "./$types";
 import { randomBytes } from "crypto";
-import { GOOGLE_COOKIE_PATH, GOOGLE_CSRF_STATE_NAME } from "../types";
+import { GOOGLE_COOKIE_PATH, GOOGLE_CSRF_STATE_NAME } from "$lib/types/users";
 
 export const GET: RequestHandler = ({ cookies }) => {
   const state = randomBytes(16).toString("hex");

@@ -8,7 +8,8 @@
   import removeSvg from "$lib/assets/remove.svg";
   import substituteSvg from "$lib/assets/substitute.svg";
   import { goto } from "$app/navigation";
-  import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/profile/$types";
+  import type { SubmitFunction } from "../../../.svelte-kit/types/src/routes/(app)/lists/upsert/$types";
+  import { safeParseUpsertGroceryListItem } from "$lib/validators/groceryList";
 
   type ListFormProps = {
     initialList: GroceryListFormData;
@@ -32,6 +33,7 @@
   let groupUserIsTyping = $state("");
   let substituteItemListKey = $state("");
   let newSubstituteName = $state("");
+  let formErrorMap = $state(new Map<string, string>());
 
   let selectedListGroups = $derived.by(() => {
     const uniqueGroupNames = new Set<string>();
@@ -59,7 +61,7 @@
   );
 
   let form: HTMLFormElement; // todo can use this to programmatically submit via form.requestSubmit() when debouncing
-  // todo it is kinda annoying how hitting enter submits (even though that is technically how forms are supposed to work)
+  // todo it is also kinda annoying how hitting enter submits (even though that is technically how forms are supposed to work)
   // user might not expect that, think about how ot prevent this form-wide but also allow upsert button to work
   // easiest way to fix this is just trigger an api call when the upsert button is hit,
   // only downside there is that I'll have to rewrite the backend validation to take in json
@@ -104,12 +106,10 @@
 
   function onTitleChange(e: { currentTarget: HTMLInputElement }) {
     groceryList.title = e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onBudgetChange(e: { currentTarget: HTMLInputElement }) {
     groceryList.budget = parseFloat(e.currentTarget.value);
-    // todo debounce submission, maybe validation
   }
 
   function onRemoveItem(itemListKey: string) {
@@ -117,13 +117,10 @@
     substituteItems = substituteItems.filter(
       (sub) => sub.substituteForItemListKey !== itemListKey,
     );
-
-    // todo debounce submission, maybe validation
   }
 
   function onItemNameChange(e: { currentTarget: HTMLInputElement }, i: number) {
     mainItems[i].name = e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onItemQuantityChange(
@@ -131,7 +128,6 @@
     i: number,
   ) {
     mainItems[i].quantity = +e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onItemNotesChange(
@@ -139,12 +135,10 @@
     i: number,
   ) {
     mainItems[i].notes = e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onItemLinkChange(e: { currentTarget: HTMLInputElement }, i: number) {
     mainItems[i].link = e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onItemGroupChange(
@@ -153,7 +147,6 @@
   ) {
     groupUserIsTyping = e.currentTarget.value;
     mainItems[i].groupName = e.currentTarget.value;
-    // todo debounce submission, maybe validation
   }
 
   function onSubstituteNameChange(
@@ -166,7 +159,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].name = e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
   }
 
   function onSubstituteQuantityChange(
@@ -179,7 +171,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].quantity = +e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
   }
 
   function onSubstituteNotesChange(
@@ -192,7 +183,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].notes = e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
   }
 
   function onSubstituteLinkChange(
@@ -205,7 +195,6 @@
     if (indexOfSub !== -1) {
       substituteItems[indexOfSub].link = e.currentTarget.value;
     }
-    // todo debounce submission, maybe validation
   }
 
   function onRemoveSubstitute(listKey: string) {
@@ -281,39 +270,97 @@
           (item) => item.listKey === sub.substituteForItemListKey,
         );
 
-        formData.set(`itemId${index}`, sub.id?.toString() ?? "");
+        formData.set(`itemId${sub.listKey}`, sub.id?.toString() ?? "");
         formData.set(
-          `substituteFor${index}`,
+          `itemSubstituteForItemId${sub.listKey}`,
           itemSubbedFor?.id?.toString() ?? "",
         );
         formData.set(
-          `subForListKey${index}`,
+          `itemSubstituteForItemListKey${sub.listKey}`,
           sub.substituteForItemListKey ?? "",
         );
         formData.set(`itemListKey${index}`, sub.listKey);
-        formData.set(`name${index}`, sub.name);
-        formData.set(`quantity${index}`, sub.quantity?.toString() ?? "");
-        formData.set(`notes${index}`, sub.notes ?? "");
-        formData.set(`link${index}`, sub.link ?? "");
-        formData.set(`groupName${index}`, itemSubbedFor?.groupName ?? "");
+        formData.set(`itemName${sub.listKey}`, sub.name);
+        formData.set(
+          `itemQuantity${sub.listKey}`,
+          sub.quantity?.toString() ?? "",
+        );
+        formData.set(`itemNotes${sub.listKey}`, sub.notes ?? "");
+        formData.set(`itemLink${sub.listKey}`, sub.link ?? "");
+        formData.set(
+          `itemGroupName${sub.listKey}`,
+          itemSubbedFor?.groupName ?? "",
+        );
         index++;
       });
 
-      formData.set("count", `${mainItems.length + substituteItems.length}`);
+      formData.set(
+        "itemsCount",
+        `${mainItems.length + substituteItems.length}`,
+      );
     }
 
     return async ({ result }) => {
-      if (result.status === 400) {
-        console.error(result);
-        // todo handle and display validation errors
-      } else if (result.status === 204) {
-        void goto("/lists");
-      } else {
-        console.error(result);
-        // todo handle and display error
+      switch (result.type) {
+        case "success":
+          formErrorMap = new Map<string, string>();
+          void goto("/lists");
+
+          break;
+        case "failure":
+          if (result.data && result.data.errorMap.size > 0) {
+            formErrorMap = result.data.errorMap;
+
+            substituteItems.forEach((sub) => {
+              for (let key of formErrorMap.keys()) {
+                if (key.includes(sub.listKey)) {
+                  formErrorMap.set(
+                    `sub${sub.substituteForItemListKey}`,
+                    "Check substitute(s) for errors",
+                  );
+                  break;
+                }
+              }
+            });
+          } else {
+            formErrorMap = new Map<string, string>().set(
+              "form",
+              "An unexpected error occurred",
+            );
+          }
+
+          break;
+        case "error":
+          formErrorMap = new Map<string, string>().set(
+            "form",
+            "An unexpected error occurred",
+          );
+
+          break;
       }
     };
   };
+
+  function onCloseSubstituteModal() {
+    let newErrorMap = new Map<string, string>();
+    selectedSubstituteItems.forEach((item) => {
+      const listItemRes = safeParseUpsertGroceryListItem({
+        ...item,
+        notes: item.notes?.length ? item.notes : null,
+        link: item.link?.length ? item.link : null,
+        errorMapPrefix: "item",
+        errorMapSuffix: item.listKey,
+      });
+      if (listItemRes.errorMap.size > 0) {
+        newErrorMap = new Map([...newErrorMap, ...listItemRes.errorMap]);
+      }
+    });
+
+    formErrorMap = newErrorMap;
+    if (newErrorMap.size === 0) {
+      substituteItemListKey = "";
+    }
+  }
 </script>
 
 <form
@@ -325,20 +372,36 @@
   <input type="hidden" name="id" value={groceryList.id} />
 
   <div class="title-section">
+    {#if !!formErrorMap.get("ItemsCount")?.length || !!formErrorMap.get("ItemsCount")?.length}
+      <div class="title-section-error">An unexpected error occurred</div>
+    {/if}
+
+    {#if !!formErrorMap.get("Form")?.length}
+      <div class="title-section-error">{formErrorMap.get("Form")}</div>
+    {/if}
+
+    {#if !!formErrorMap.get("Title")?.length}
+      <div class="title-section-error">Title {formErrorMap.get("Title")}</div>
+    {/if}
     <div class="title-section-item">
       <label for="title"> Title </label>
       <input
         id="title"
         class="title-section-input"
-        required
         name="title"
         type="text"
         value={groceryList.title}
         placeholder="Title"
         onchange={onTitleChange}
+        required
+        minlength={1}
+        maxlength={256}
       />
     </div>
 
+    {#if !!formErrorMap.get("Budget")?.length}
+      <div class="title-section-error">Budget {formErrorMap.get("Budget")}</div>
+    {/if}
     <div class="title-section-item">
       <label for="budget"> Budget </label>
       <input
@@ -349,8 +412,8 @@
         step="0.01"
         placeholder="0.00"
         value={groceryList.budget}
-        min="0.00"
         onchange={onBudgetChange}
+        min="0.00"
       />
     </div>
   </div>
@@ -370,6 +433,8 @@
         type="text"
         placeholder="add new item"
         value={newItemName}
+        minlength={1}
+        maxlength={256}
       />
       <IconButton
         onclick={onNewItemClick}
@@ -381,7 +446,7 @@
   </div>
 
   <div class="items-list">
-    <input type="hidden" name="count" value={mainItems.length} />
+    <input type="hidden" name="itemsCount" value={mainItems.length} />
 
     <ul class="items-ul">
       {#if !mainItems.length}
@@ -390,34 +455,64 @@
 
       {#each mainItems as item, i (item.listKey)}
         <li class="list-item">
-          <input type="hidden" name={`itemId${i}`} value={mainItems[i].id} />
-
-          <input type="hidden" name={`substituteFor${i}`} value={null} />
-          <input type="hidden" name={`subForListKey${i}`} value={null} />
-
+          <input
+            type="hidden"
+            name={`itemId${item.listKey}`}
+            value={mainItems[i].id}
+          />
+          <input
+            type="hidden"
+            name={`itemSubstituteForItemId${item.listKey}`}
+            value={null}
+          />
+          <input
+            type="hidden"
+            name={`itemSubstituteForItemListKey${item.listKey}`}
+            value={null}
+          />
           <input type="hidden" name={`itemListKey${i}`} value={item.listKey} />
 
+          {#if !!formErrorMap.get(`itemId${item.listKey}`)?.length || formErrorMap.get(`itemSubstituteForItemId${item.listKey}`)?.length || formErrorMap.get(`itemSubstituteForItemListKey${item.listKey}`)?.length || formErrorMap.get(`itemListKey${item.listKey}`)?.length}
+            <div class="error">An unexpected error occurred</div>
+          {/if}
+
+          {#if !!formErrorMap.get(`sub${item.listKey}`)?.length}
+            <div class="error">{formErrorMap.get(`sub${item.listKey}`)}</div>
+          {/if}
+
+          {#if !!formErrorMap.get(`itemName${item.listKey}`)?.length}
+            <div class="error">
+              Name {formErrorMap.get(`itemName${item.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
-            <label for={`name${i}`}> Name </label>
+            <label for={`itemName${item.listKey}`}> Name </label>
             <input
-              id={`name${i}`}
+              id={`itemName${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].name}
-              required
-              name={`name${i}`}
+              name={`itemName${item.listKey}`}
               type="text"
               oninput={(e) => onItemNameChange(e, i)}
               placeholder="name"
+              required
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemQuantity${item.listKey}`)?.length}
+            <div class="error">
+              Quantity {formErrorMap.get(`itemQuantity${item.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
-            <label for={`quantity${i}`}> Quantity </label>
+            <label for={`itemQuantity${item.listKey}`}> Quantity </label>
             <input
-              id={`quantity${i}`}
+              id={`itemQuantity${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].quantity}
-              name={`quantity${i}`}
+              name={`itemQuantity${item.listKey}`}
               type="number"
               min={1}
               oninput={(e) => onItemQuantityChange(e, i)}
@@ -425,48 +520,69 @@
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemNotes${item.listKey}`)?.length}
+            <div class="error">
+              Notes {formErrorMap.get(`itemNotes${item.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
-            <label for={`notes${i}`}> Notes </label>
+            <label for={`itemNotes${item.listKey}`}> Notes </label>
             <input
-              id={`notes${i}`}
+              id={`itemNotes${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].notes}
-              name={`notes${i}`}
+              name={`itemNotes${item.listKey}`}
               type="text"
               oninput={(e) => onItemNotesChange(e, i)}
               placeholder="notes"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemLink${item.listKey}`)?.length}
+            <div class="error">
+              Link {formErrorMap.get(`itemLink${item.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
-            <label for={`link${i}`}> Link </label>
+            <label for={`itemLink${item.listKey}`}> Link </label>
             <input
-              id={`link${i}`}
+              id={`itemLink${item.listKey}`}
               class="list-item-input"
               value={mainItems[i].link}
-              name={`link${i}`}
+              name={`itemLink${item.listKey}`}
               type="text"
               oninput={(e) => onItemLinkChange(e, i)}
               placeholder="https://google.com"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemGroupName${item.listKey}`)?.length}
+            <div class="error">
+              Group {formErrorMap.get(`itemGroupName${item.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
-            <label for={`groupInput${i}`}> Group </label>
+            <label for={`itemGroupInput${item.listKey}`}> Group </label>
             <input
-              id={`groupInput${i}`}
+              id={`itemGroupInput${item.listKey}`}
               class="list-item-input"
-              list={`groupList${i}`}
-              name={`groupName${i}`}
+              list={`itemGroupList${item.listKey}`}
+              name={`itemGroupName${item.listKey}`}
               value={item.groupName}
               placeholder="group"
               oninput={(e) => onItemGroupChange(e, i)}
               onblur={() => {
                 groupUserIsTyping = "";
               }}
+              minlength={1}
+              maxlength={256}
             />
 
-            <datalist id={`groupList${i}`}>
+            <datalist id={`itemGroupList${item.listKey}`}>
               {#each selectedListGroups as group (group)}
                 <option value={group}> </option>
               {/each}
@@ -509,6 +625,8 @@
         type="text"
         placeholder="add new substitute"
         value={newSubstituteName}
+        minlength={1}
+        maxlength={256}
       />
       <IconButton
         onclick={onNewSubstituteClick}
@@ -525,22 +643,11 @@
 
       {#each selectedSubstituteItems as sub, i (sub.listKey)}
         <li class="list-item">
-          <input type="hidden" name={`subItemId${i}`} value={sub.id} />
-
-          <input
-            type="hidden"
-            name={`substituteFor${i}`}
-            value={mainItems.find(
-              (item) => item.listKey === sub.substituteForItemListKey,
-            )?.id}
-          />
-
-          <input
-            type="hidden"
-            name={`subItemListKey${i}`}
-            value={sub.listKey}
-          />
-
+          {#if !!formErrorMap.get(`itemName${sub.listKey}`)?.length}
+            <div class="error">
+              Name {formErrorMap.get(`itemName${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subName${i}`}> Name </label>
             <input
@@ -552,9 +659,16 @@
               type="text"
               oninput={(e) => onSubstituteNameChange(e, sub.listKey)}
               placeholder="name"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemQuantity${sub.listKey}`)?.length}
+            <div class="error">
+              Quantity {formErrorMap.get(`itemQuantity${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subQuantity${i}`}> Quantity </label>
             <input
@@ -569,6 +683,11 @@
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemNotes${sub.listKey}`)?.length}
+            <div class="error">
+              Notes {formErrorMap.get(`itemNotes${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subNotes${i}`}> Notes </label>
             <input
@@ -579,9 +698,16 @@
               type="text"
               oninput={(e) => onSubstituteNotesChange(e, sub.listKey)}
               placeholder="notes"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
+          {#if !!formErrorMap.get(`itemLink${sub.listKey}`)?.length}
+            <div class="error">
+              Link {formErrorMap.get(`itemLink${sub.listKey}`)}
+            </div>
+          {/if}
           <div class="list-item-attribute">
             <label for={`subLink${i}`}> Link </label>
             <input
@@ -592,6 +718,8 @@
               type="text"
               oninput={(e) => onSubstituteLinkChange(e, sub.listKey)}
               placeholder="https://google.com"
+              minlength={1}
+              maxlength={256}
             />
           </div>
 
@@ -608,9 +736,7 @@
     </ul>
 
     <Button
-      onclick={() => {
-        substituteItemListKey = "";
-      }}
+      onclick={onCloseSubstituteModal}
       buttonClass="close-substitute"
       color="secondary">Close</Button
     >
@@ -764,5 +890,16 @@
     .close-substitute {
       align-self: end;
     }
+  }
+
+  .error {
+    color: red;
+    font-size: 14px;
+  }
+
+  .title-section-error {
+    color: red;
+    font-size: 16px;
+    align-self: center;
   }
 </style>

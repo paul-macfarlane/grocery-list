@@ -6,7 +6,7 @@ import {
 } from "$env/static/private";
 import axios from "axios";
 import { createUserSession } from "$lib/services/users";
-import type { GoogleUser } from "../../types";
+import type { GoogleUser } from "$lib/types/users";
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get("code");
