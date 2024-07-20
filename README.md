@@ -20,7 +20,7 @@ The purpose of this app is to make grocery for me and my girlfriend easier. The 
   - [x] items can be grouped
   - [x] they can also be copied/duplicated to a new list
   - [x] items can have substitutes when the item is not available
-  - [ ] list form validation (server side errors and client side handling)
+  - [x] list form validation (server side errors and client side handling)
   - [ ] autosave/debouncing
 - [ ] executing a grocery list
   - [ ] a user can enter an interactive ui execute the list
