@@ -1,8 +1,11 @@
 # grocery-list
 
+NOTE: This repo has been replaced with https://github.com/paul-macfarlane/grocer-ease. This was working fine but I wanted to stop rolling my own UI components and decided to
+re-architect the app a bit to better support collaboration on lists and make the code for the main grocery list form easier to maintain.
+
 ## Summary
 
-The purpose of this app is to make grocery for me and my girlfriend easier. The list of expected features are
+The purpose of this app is to make grocery shopping for me and my girlfriend easier.
 
 ## Feature List
 
